@@ -172,6 +172,7 @@ function calc() {
 }
 function level() {
   let ps = S.cat.products.filter(p => p.sec === S.sec);
+  if (S.path.length === 0 && (S.cat.staged || []).includes(S.sec) && (S.cat.stages || []).length) return { groups: S.cat.stages };
   if (S.path.length > 0) ps = ps.filter(p => p.l1 === S.path[0]);
   if (S.path.length > 1) ps = ps.filter(p => p.l2 === S.path[1]);
   const key = S.path.length === 0 ? 'l1' : S.path.length === 1 ? 'l2' : null;
@@ -196,7 +197,7 @@ const V = {
       (S.cat ? '<button class="b-white" data-act="start">ابدأ</button>' : '<p style="color:#fff;font-weight:700">جارِ التحميل…</p>') + '</div>';
   },
   register() {
-    const stages = [...new Set(S.cat.products.filter(p => p.sec === 'الملازم').map(p => p.l1).filter(Boolean))];
+    const stages = (S.cat.stages || []).length ? S.cat.stages : [...new Set(S.cat.products.filter(p => p.sec === 'الملازم').map(p => p.l1).filter(Boolean))];
     return '<div class="row"><img class="logo" src="' + LOGO + '" alt="" width="56" height="56"><h1>إنشاء حساب</h1></div>' + msg() +
       '<div class="card">' +
       '<div class="field"><label for="f-code">كود التسجيل</label><input id="f-code" autocomplete="off" placeholder="الكود من المكتبة"><span class="hint">تحصل على الكود من مكتبة الروان.</span></div>' +
@@ -236,10 +237,11 @@ const V = {
     const title = S.path.length ? S.path[S.path.length - 1] : S.sec;
     let body = '';
     if (lv.groups) {
-      body = '<div class="' + (S.path.length === 0 && S.sec === 'الملازم' ? 'grid' : '') + '" style="' + (S.path.length === 0 && S.sec === 'الملازم' ? '' : 'display:flex;flex-direction:column;gap:10px') + '">' +
+      const two = S.path.length === 0 && lv.groups.length > 6;
+      body = '<div class="' + (two ? 'grid' : '') + '" style="' + (two ? '' : 'display:flex;flex-direction:column;gap:10px') + '">' +
         lv.groups.map(g => '<button class="tile plain" data-act="grp" data-v="' + esc(g) + '">' + esc(g) + '</button>').join('') + '</div>';
     } else if (!lv.products.length) {
-      body = '<div class="card"><p style="font-weight:800">قريباً</p><p class="hint">لا توجد مواد في هذا القسم حالياً.</p></div>';
+      body = '<div class="card"><p style="font-weight:800">قريباً</p><p class="hint">' + (S.path.length ? 'لا توجد مواد لهذه المرحلة حالياً.' : 'لا توجد مواد في هذا القسم حالياً.') + '</p></div>';
     } else {
       body = lv.products.map(p => {
         const q = S.cart[p.id] || 0;
