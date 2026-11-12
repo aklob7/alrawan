@@ -218,8 +218,9 @@ const V = {
       '<button class="' + (co.mode === 'delivery' ? 'b-on' : 'b-line') + '" data-act="mode" data-v="delivery">توصيل</button></div>' +
       (co.mode === 'delivery' ? '<div class="field"><label for="f-area">المنطقة (داخل بغداد)</label><select id="f-area" data-change="area"><option value="">اختر المنطقة</option>' +
         S.cat.areas.map(a => '<option' + (a.name === co.area ? ' selected' : '') + ' value="' + esc(a.name) + '">' + esc(a.name) + ' — ' + money(a.price) + '</option>').join('') + '</select></div>' +
-        '<button class="b-line" data-act="locate">' + (S.locating ? 'جارِ تحديد الموقع…' : co.lat ? 'تم تحديد موقعك ✓ — تحديث' : 'حدّد موقعي تلقائياً') + '</button>' +
-        '<div class="field"><label for="f-addr">العنوان وأقرب نقطة دالة</label><textarea id="f-addr" rows="2" placeholder="مثال: زيونة، شارع الربيعي، قرب...">' + esc(co.addr) + '</textarea><span class="hint">اكتبه إن لم يعمل تحديد الموقع، أو لتوضيح المكان.</span></div>' : '') +
+        '<button class="b-line" data-act="locate">' + (S.locating ? 'جارِ تحديد الموقع…' : co.lat ? 'تم تحديد موقعك ✓ — تحديث' : 'حدّد موقعي (إلزامي للتوصيل)') + '</button>' +
+        (co.lat ? '' : '<span class="hint">لا يمكن إرسال طلب التوصيل بدون تحديد الموقع.</span>') +
+        '<div class="field"><label for="f-addr">أقرب نقطة دالة (اختياري)</label><textarea id="f-addr" rows="2" placeholder="مثال: زيونة، شارع الربيعي، قرب...">' + esc(co.addr) + '</textarea><span class="hint">يساعد المندوب في الوصول إليك.</span></div>' : '') +
       '<label>طريقة الدفع</label><div class="grid"><button class="' + (co.pay === 'cod' ? 'b-on' : 'b-line') + '" data-act="pay" data-v="cod">عند الاستلام</button>' +
       '<button class="' + (co.pay === 'online' ? 'b-on' : 'b-line') + '" data-act="pay" data-v="online">دفع إلكتروني</button></div>' +
       (co.pay === 'online' ? '<p class="hint">يظهر لك رقم التحويل بعد قبول المكتبة للطلب.</p>' : '') +
@@ -228,7 +229,7 @@ const V = {
       '<div class="line"><span>رسوم الخدمة</span><span>' + money(c.fee) + '</span></div>' +
       (co.mode === 'delivery' ? '<div class="line"><span>التوصيل</span><span>' + (co.area ? money(c.delivery) : 'اختر المنطقة') + '</span></div>' : '') +
       '<div class="line total"><span>التكلفة الكلية</span><span>' + money(c.total) + '</span></div></div>' +
-      '<button class="b-white" data-act="confirm"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الإرسال…' : 'تأكيد الطلب') + '</button>';
+      '<button class="' + (co.mode === 'delivery' && !co.lat ? 'b-line' : 'b-white') + '" data-act="confirm"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الإرسال…' : 'تأكيد الطلب') + '</button>';
   },
   orders() {
     return head('طلباتي', 'home') + msg() + '<button class="b-white" data-act="orders">تحديث</button>' +
@@ -318,7 +319,7 @@ const ACT = {
   pay(d) { syncCo(); S.co.pay = d.v; render(); },
   locate() {
     syncCo();
-    const fail = t => { S.locating = false; S.msg = t + ' اكتب عنوانك في الخانة بدلاً من ذلك.'; render(); };
+    const fail = t => { S.locating = false; S.msg = t; render(); };
     if (!window.isSecureContext) return fail('تحديد الموقع يعمل فقط عند فتح التطبيق من رابطه على الإنترنت (https)، لا من ملف على الجهاز.');
     if (!navigator.geolocation) return fail('جهازك لا يدعم تحديد الموقع.');
     S.locating = true; S.msg = ''; render();
@@ -335,7 +336,7 @@ const ACT = {
     syncCo();
     const co = S.co;
     if (co.mode === 'delivery' && !co.area) { S.msg = 'اختر منطقة التوصيل'; render(); return; }
-    if (co.mode === 'delivery' && !co.lat && co.addr.trim().length < 5) { S.msg = 'حدّد موقعك أو اكتب عنوانك للتوصيل'; render(); return; }
+    if (co.mode === 'delivery' && !co.lat) { S.msg = 'يجب تحديد موقعك أولاً لإرسال طلب التوصيل. اضغط زر "حدّد موقعي".'; render(); return; }
     S.busy = true; S.msg = ''; render();
     const items = cartLines().map(l => ({ id: l.p.id, qty: l.q }));
     api('order', Object.assign({ items, mode: co.mode, area: co.area, pay: co.pay, lat: co.lat, lng: co.lng, note: (co.mode === 'delivery' && co.addr.trim() ? 'العنوان: ' + co.addr.trim() + (co.note ? ' | ' : '') : '') + co.note }, auth())).then(r => {
