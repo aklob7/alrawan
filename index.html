@@ -111,6 +111,31 @@ input,select,textarea{box-shadow:inset 0 3px 0 rgba(0,0,0,.08)}
 @keyframes adIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 .adin{animation:adIn .45s ease-out both}
 .promo{display:flex;gap:8px}.promo input{flex:1;text-transform:uppercase}.promo button{width:auto}
+/* السلة العائمة */
+#cartbar{position:fixed;left:0;right:0;bottom:0;z-index:5;padding:10px 16px calc(10px + env(safe-area-inset-bottom));pointer-events:none}
+#cartbar button{pointer-events:auto;max-width:560px;margin:0 auto;display:flex;align-items:center;gap:10px;background:#111;color:#fff;box-shadow:0 5px 0 #000,0 14px 26px rgba(0,0,0,.4);animation:barIn .25s ease-out}
+#cartbar .cnt{background:var(--red);border-radius:10px;padding:2px 10px;font-size:15px}
+#cartbar .sum{margin-inline-start:auto}
+body.hasbar #app{padding-bottom:96px}
+@keyframes barIn{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+/* مراجعة الطلب */
+#review-bg{position:fixed;inset:0;z-index:8;background:rgba(0,0,0,.6)}
+#review{position:fixed;left:12px;right:12px;bottom:12px;max-width:560px;margin:0 auto;z-index:9;max-height:86vh;overflow:auto;background:#fff;border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:10px;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+#review h2{color:#111;text-shadow:none}
+#review ul{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:4px;font-weight:700}
+.ring{width:54px;height:54px;border-radius:50%;border:4px solid var(--red);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:var(--red);flex-shrink:0}
+/* البومة النائمة */
+.zzz{display:none}
+.owl.sleep .zzz{display:inline}
+.owl.sleep .owl-lids{opacity:1;animation:none}
+.owl.sleep .owl-pupils{opacity:0}
+.owl.sleep .owl-all{animation:owlSway 9s ease-in-out infinite}
+.zzz text{font-family:system-ui,sans-serif;font-weight:900;fill:#111;animation:zFloat 3s ease-in-out infinite;opacity:0}
+.zzz text:nth-child(2){animation-delay:1s}.zzz text:nth-child(3){animation-delay:2s}
+@keyframes zFloat{0%{opacity:0;transform:translate(0,6px)}30%{opacity:1}100%{opacity:0;transform:translate(8px,-14px)}}
+.night{background:#1B1F3A;color:#fff}
+.night .hint{color:#C9CCE6}
+@media (prefers-reduced-motion:reduce){.zzz text{animation:none;opacity:1}#cartbar button{animation:none}}
 @media (prefers-reduced-motion:reduce){.owl-all,.owl-body,.owl-lids,.owl-pupils,.owl-wl,.owl-wr,#drawer,#drawer-bg,.adin{animation:none}}
 .adcard{position:relative;overflow:hidden}
 .adcard::after{content:'';position:absolute;inset-inline-start:0;top:0;bottom:0;width:10px;background:var(--red)}
@@ -126,6 +151,7 @@ input,select,textarea{box-shadow:inset 0 3px 0 rgba(0,0,0,.08)}
 </head>
 <body>
 <div id="app"></div>
+<div id="cartbar"></div>
 <div id="layer"></div>
 <input id="f-photo" type="file" accept="image/*" hidden>
 <script src="config.js"></script>
@@ -156,7 +182,7 @@ const ICONS = {
 };
 const DEF_ICON = '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>';
 const icon = s => SV(ICONS[s] || DEF_ICON);
-const OWL = w => '<svg class="owl" width="' + w + '" height="' + Math.round(w * 1.08) + '" viewBox="0 0 104 112" role="img" aria-label="بومة الروان"><g class="owl-all">' +
+const OWL = w => '<svg class="owl' + (isClosed() ? ' sleep' : '') + '" width="' + w + '" height="' + Math.round(w * 1.08) + '" viewBox="0 0 104 112" role="img" aria-label="بومة الروان"><g class="owl-all">' +
   '<path d="M22 30 L30 8 L44 24 Z" fill="#fff" stroke="#111" stroke-width="3" stroke-linejoin="round"/><path d="M82 30 L74 8 L60 24 Z" fill="#fff" stroke="#111" stroke-width="3" stroke-linejoin="round"/>' +
   '<g class="owl-body"><ellipse cx="52" cy="62" rx="38" ry="44" fill="#fff" stroke="#111" stroke-width="3"/>' +
   '<path class="owl-wl" d="M16 62 C 6 74, 10 92, 22 96" fill="none" stroke="#111" stroke-width="3" stroke-linecap="round"/><path class="owl-wr" d="M88 62 C 98 74, 94 92, 82 96" fill="none" stroke="#111" stroke-width="3" stroke-linecap="round"/>' +
@@ -165,14 +191,42 @@ const OWL = w => '<svg class="owl" width="' + w + '" height="' + Math.round(w * 
   '<g class="owl-pupils"><circle cx="38" cy="51" r="6" fill="#111"/><circle cx="66" cy="51" r="6" fill="#111"/><circle cx="40" cy="49" r="1.8" fill="#fff"/><circle cx="68" cy="49" r="1.8" fill="#fff"/></g>' +
   '<g class="owl-lids"><circle cx="37" cy="50" r="12.4" fill="#fff"/><circle cx="67" cy="50" r="12.4" fill="#fff"/><path d="M27 51 q10 6 20 0 M57 51 q10 6 20 0" fill="none" stroke="#111" stroke-width="2.5" stroke-linecap="round"/></g>' +
   '<path d="M46 62 L58 62 L52 73 Z" fill="#D91219" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/>' +
-  '<path d="M40 105 v5 M46 105 v5 M58 105 v5 M64 105 v5" stroke="#111" stroke-width="3" stroke-linecap="round"/></g></svg>';
+  '<path d="M40 105 v5 M46 105 v5 M58 105 v5 M64 105 v5" stroke="#111" stroke-width="3" stroke-linecap="round"/></g>' +
+  '<g class="zzz" aria-hidden="true"><text x="78" y="22" font-size="16">Z</text><text x="90" y="8" font-size="12">z</text><text x="99" y="-4" font-size="9">z</text></g></svg>';
 const I = {
   menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
   history: '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/>',
   offer: '<path d="M3 12l9-9 9 9-9 9z"/><path d="M9 15l6-6"/><circle cx="9.5" cy="9.5" r="1"/><circle cx="14.5" cy="14.5" r="1"/>',
   card: '<rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="12" r="2.5"/><path d="M14 10h4M14 14h4"/>',
-  out: '<path d="M10 4H5v16h5"/><path d="M14 8l4 4-4 4M18 12H9"/>'
+  out: '<path d="M10 4H5v16h5"/><path d="M14 8l4 4-4 4M18 12H9"/>',
+  pin: '<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'
 };
+/* ---------- أوقات الدوام (بتوقيت بغداد) ---------- */
+function nowBaghdad() {
+  try {
+    const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Baghdad', hour: 'numeric', minute: 'numeric', hourCycle: 'h23' }).formatToParts(new Date());
+    const v = k => Number((p.find(x => x.type === k) || {}).value);
+    return v('hour') + v('minute') / 60;
+  } catch (e) { return null; }
+}
+function isClosed() {
+  const h = S.cat && S.cat.hours; if (!h) return false;
+  const n = nowBaghdad(); if (n == null) return !h.isOpen;
+  return h.close > h.open ? !(n >= h.open && n < h.close) : !(n >= h.open || n < h.close);
+}
+function hourText(h) {
+  h = Number(h) % 24;
+  if (h === 0) return '12 ليلاً';
+  if (h < 12) return h + ' صباحاً';
+  if (h === 12) return '12 ظهراً';
+  return (h - 12) + ' مساءً';
+}
+function closedCard() {
+  if (!isClosed()) return '';
+  const h = S.cat.hours;
+  return '<div class="card night"><p style="font-size:18px;font-weight:800">🌙 المكتبة مغلقة الآن</p>' +
+    '<p class="hint">الدوام من ' + hourText(h.open) + ' حتى ' + hourText(h.close) + '. تستطيع الطلب الآن، ويُجهَّز طلبك صباحاً عند بدء الدوام.</p></div>';
+}
 const offerId = o => o.title + '|' + o.text + '|' + o.date;
 const offers = () => (S.cat && S.cat.offers) || [];
 const unseen = () => offers().filter(o => !S.seen.includes(offerId(o))).length;
@@ -216,6 +270,7 @@ function drawerHTML() {
     '<button class="b-line ditem" data-act="orders">' + SV(I.history) + '<span>السجل</span></button>' +
     '<button class="b-line ditem" data-act="offers">' + SV(I.offer) + '<span>العروض</span>' + (n ? '<span class="badge">' + n + '</span>' : '') + '</button>' +
     '<button class="b-line ditem" data-act="loyalty">' + SV(I.card) + '<span>بطاقة الوفاء</span></button>' +
+    '<button class="b-line ditem" data-act="branches">' + SV(I.pin) + '<span>فروع الروان</span></button>' +
     '<div style="flex:1"></div><div class="row" style="justify-content:center">' + OWL(64) + '</div>' +
     '<button class="b-line ditem" style="justify-content:center;font-size:15px;min-height:44px" data-act="logout">' + SV(I.out) + '<span>تسجيل الخروج</span></button></aside>';
 }
@@ -227,13 +282,13 @@ function gotStatus(r) {
   S.orders = r.orders || []; S.stamps = r.stamps || 0; S.rewards = r.rewards || 0;
   if (r.code && S.user && S.user.code !== r.code) { S.user.code = r.code; store.set('rw_user', S.user); }
 }
-const STATUS_TEXT = { 'جديد': 'أُرسل طلبك إلى المكتبة', 'مقبول': 'تم قبول طلبك', 'مرفوض': 'نعتذر، الطلب غير متوفر حالياً' };
+const STATUS_TEXT = { 'مؤجل': 'طلبك مؤجل — يُجهَّز صباحاً عند بدء الدوام', 'جديد': 'أُرسل طلبك إلى المكتبة', 'مقبول': 'تم قبول طلبك', 'مرفوض': 'نعتذر، الطلب غير متوفر حالياً' };
 
 /* ---------- وضع العرض التجريبي (يعمل قبل ربط الخادم) ---------- */
 const DEMO_CAT = {
   settings: { fee: 500, stamps: 10, reward: '[المكافأة]', wallet: '[رقم المحفظة]' },
   areas: [{ name: 'زيونة', price: 2500 }, { name: 'الغدير', price: 2500 }, { name: 'بقية مناطق بغداد', price: 3500 }],
-  ads: ['إعلان تجريبي — تضيفه من الجدول'],
+  ads: ['إعلان تجريبي — تضيفه من الجدول'], hours: { open: 7, close: 24, isOpen: true }, branches: [],
   sections: ['الملازم', 'المناهج الدراسية', 'القرطاسية', 'الألعاب والهدايا', 'الكتب والروايات', 'الاستنساخ', 'فرمتلي'],
   products: [
     { id: 'D1', sec: 'الملازم', l1: 'مرحلة تجريبية ١', l2: 'مادة تجريبية', name: 'ملزمة تجريبية ١', price: 1000, avail: true },
@@ -341,8 +396,8 @@ const V = {
     const total = Number(S.cat.settings.stamps || 10), have = S.stamps % total;
     let pips = ''; for (let i = 0; i < total; i++) pips += '<i' + (i < have ? ' class="on"' : '') + '></i>';
     return '<div class="row"><button class="icon b-white" style="position:relative" data-act="openDrawer" aria-label="القائمة' + (u ? '، ' + u + ' عروض جديدة' : '') + '">' + SV(I.menu) + (u ? '<span class="badge">' + u + '</span>' : '') + '</button>' +
-      OWL(58) + '<h1 class="grow" style="font-size:22px">أهلاً ' + esc(S.user.name) + '</h1>' +
-      '<button class="b-white" style="width:auto" data-act="cart">السلة' + (n ? ' (' + n + ')' : '') + '</button></div>' + msg() +
+      OWL(58) + '<h1 class="grow" style="font-size:22px">' + (isClosed() ? 'تصبح على خير ' : 'أهلاً ') + esc(S.user.name) + '</h1>' +
+      '<button class="b-white" style="width:auto" data-act="cart">السلة' + (n ? ' (' + n + ')' : '') + '</button></div>' + msg() + closedCard() +
       (ads.length ? '<div class="card adcard"><div id="ad" class="adin">' + adHTML(ads[S.ad % ads.length]) + '</div>' +
         (ads.length > 1 ? '<div class="dots" id="dots" aria-hidden="true">' + ads.map((a, i) => '<i' + (i === S.ad % ads.length ? ' class="on"' : '') + '></i>').join('') + '</div>' : '') + '</div>' : '') +
       ('<button class="mini" data-act="loyalty">' + SV(I.card).replace('<svg ', '<svg width="34" height="34" style="color:#D91219;flex-shrink:0" ') +
@@ -379,9 +434,7 @@ const V = {
           '<div class="grow" style="display:flex;flex-direction:column;gap:8px;align-items:flex-start"><p style="font-size:17px;font-weight:800">' + esc(p.name) + '</p><p class="price">' + money(p.price) + '</p>' + ctl + '</div></div></div>';
       }).join('');
     }
-    const n = cartCount();
-    return head(title, 'back') + (S.path.length ? '<p style="color:#fff;font-weight:700">' + esc([S.sec].concat(S.path).join(' ‹ ')) + '</p>' : '') + msg() + body +
-      (n ? '<button class="b-black" data-act="cart">عرض السلة (' + n + ')</button>' : '');
+    return head(title, 'back') + (S.path.length ? '<p style="color:#fff;font-weight:700">' + esc([S.sec].concat(S.path).join(' ‹ ')) + '</p>' : '') + msg() + body;
   },
   cart() {
     const ls = cartLines();
@@ -393,7 +446,7 @@ const V = {
   },
   checkout() {
     const c = calc(), co = S.co;
-    return head('تأكيد الطلب', 'cart') + msg() + '<div class="card">' +
+    return head('تأكيد الطلب', 'cart') + msg() + closedCard() + '<div class="card">' +
       '<label>طريقة الاستلام</label><div class="grid"><button class="' + (co.mode === 'pickup' ? 'b-on' : 'b-line') + '" data-act="mode" data-v="pickup">استلام من المحل</button>' +
       '<button class="' + (co.mode === 'delivery' ? 'b-on' : 'b-line') + '" data-act="mode" data-v="delivery">توصيل</button></div>' +
       (co.mode === 'delivery' ? '<div class="field"><label for="f-area">المنطقة (داخل بغداد)</label><select id="f-area" data-change="area"><option value="">اختر المنطقة</option>' +
@@ -427,6 +480,15 @@ const V = {
         (o.status === 'مقبول' && o.pay === 'online' ? '<p class="msg">حوّل ' + money(o.total) + ' إلى: ' + esc(S.cat.settings.wallet) + ' واكتب رقم الطلب ' + esc(o.no) + ' في الملاحظة.</p>' : '') +
         '</div>').join('') : '<div class="card"><p style="font-weight:800">لا توجد طلبات بعد</p></div>');
   },
+  branches() {
+    const bs = (S.cat && S.cat.branches) || [];
+    return head('فروع الروان', 'home') + (bs.length ? bs.map(b =>
+      '<div class="card"><p style="font-size:18px;font-weight:800">' + esc(b.name) + '</p>' +
+      (b.phone ? '<p dir="ltr" style="text-align:end;font-weight:700">' + esc(b.phone) + '</p>' : '') +
+      '<div class="grid">' + (b.phone ? '<a class="btn b-red" href="tel:' + esc(b.phone) + '">اتصال</a>' : '') +
+      (b.map ? '<a class="btn b-line" href="' + esc(b.map) + '" target="_blank" rel="noopener">الموقع على الخريطة</a>' : '') + '</div></div>').join('') :
+      '<div class="card"><div class="row" style="justify-content:center">' + OWL(84) + '</div><p style="font-weight:800;text-align:center">تُضاف الفروع قريباً</p></div>');
+  },
   loyalty() {
     const total = Number(S.cat.settings.stamps || 10), have = S.stamps % total, done = Math.floor(S.stamps / total);
     let g = '';
@@ -443,11 +505,33 @@ function render() {
   const app = document.getElementById('app');
   app.className = S.anim ? 'enter' : '';
   app.innerHTML = V[S.view]();
-  document.getElementById('layer').innerHTML = S.drawer && S.user ? drawerHTML() : '';
+  document.getElementById('layer').innerHTML = S.review ? reviewHTML() : S.drawer && S.user ? drawerHTML() : '';
+  const n = S.user && S.cat && (S.view === 'home' || S.view === 'browse') ? cartCount() : 0;
+  document.getElementById('cartbar').innerHTML = n ? '<button data-act="cart" aria-label="عرض السلة"><span class="cnt">' + n + '</span><span>عرض السلة</span><span class="sum">' + money(calc().subtotal) + '</span></button>' : '';
+  document.body.classList.toggle('hasbar', !!n);
   hydrate();
   if (S.anim) window.scrollTo(0, 0);
   S.anim = false;
 }
+function reviewHTML() {
+  const c = calc(), co = S.co, r = S.review;
+  return '<div id="review-bg"></div><div id="review" role="dialog" aria-modal="true" aria-labelledby="rv-t">' +
+    '<div class="row"><h2 id="rv-t" class="grow" style="margin:0">راجع طلبك</h2><span class="ring" id="rv-n" aria-live="polite">' + r.left + '</span></div>' +
+    '<p class="hint">أنت طلبت:</p><ul>' + cartLines().map(l => '<li>' + esc(l.p.name) + ' × ' + l.q + ' — ' + money(l.p.price * l.q) + (String(S.reward) === String(l.p.id) && c.free ? ' 🎁' : '') + '</li>').join('') + '</ul>' +
+    '<div class="line"><span>الاستلام</span><span>' + (co.mode === 'delivery' ? 'توصيل' + (co.area ? ' — ' + esc(co.area) : '') : 'من المحل') + '</span></div>' +
+    '<div class="line"><span>الدفع</span><span>' + (co.pay === 'online' ? 'دفع إلكتروني' : 'عند الاستلام') + '</span></div>' +
+    (c.free ? '<div class="line price"><span>هدية الوفاء</span><span>− ' + money(c.free) + '</span></div>' : '') +
+    (c.discount ? '<div class="line price"><span>الخصم</span><span>− ' + money(c.discount) + '</span></div>' : '') +
+    '<div class="line"><span>رسوم الخدمة</span><span>' + money(c.fee) + '</span></div>' +
+    (co.mode === 'delivery' ? '<div class="line"><span>التوصيل</span><span>' + money(c.delivery) + '</span></div>' : '') +
+    '<div class="line total"><span>التكلفة الكلية</span><span>' + money(c.total) + '</span></div>' +
+    (isClosed() ? '<p class="msg">🌙 خارج الدوام: يُجهَّز طلبك صباحاً عند بدء الدوام.</p>' : '') +
+    '<p style="font-weight:800;text-align:center">هل أنت متأكد؟</p>' +
+    '<div class="grid"><button class="b-line" data-act="reviewCancel">إلغاء</button>' +
+    '<button class="b-red" id="rv-ok" data-act="send"' + (r.left > 0 || S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الإرسال…' : r.left > 0 ? 'تأكيد (' + r.left + ')' : 'تأكيد الطلب') + '</button></div></div>';
+}
+let reviewTimer = null;
+function stopReview() { clearInterval(reviewTimer); reviewTimer = null; S.review = null; }
 function go(v) { S.view = v; S.msg = ''; S.anim = true; S.drawer = false; render(); }
 function saveCart() { store.set('rw_cart', S.cart); }
 function syncCo() {
@@ -553,22 +637,40 @@ const ACT = {
     const co = S.co;
     if (co.mode === 'delivery' && !co.area) { S.msg = 'اختر منطقة التوصيل'; render(); return; }
     if (co.mode === 'delivery' && !co.lat) { S.msg = 'يجب تحديد موقعك أولاً لإرسال طلب التوصيل. اضغط زر "حدّد موقعي".'; render(); return; }
+    if (!cartLines().length) { S.msg = 'السلة فارغة'; render(); return; }
+    stopReview(); S.msg = ''; S.review = { left: 10 }; render();
+    reviewTimer = setInterval(() => {
+      if (!S.review) return stopReview();
+      S.review.left = Math.max(0, S.review.left - 1);
+      const n = document.getElementById('rv-n'), ok = document.getElementById('rv-ok');
+      if (n) n.textContent = S.review.left;
+      if (ok) { ok.disabled = S.review.left > 0; ok.textContent = S.review.left > 0 ? 'تأكيد (' + S.review.left + ')' : 'تأكيد الطلب'; }
+      if (!S.review.left) { clearInterval(reviewTimer); reviewTimer = null; if (ok) ok.focus(); }
+    }, 1000);
+  },
+  reviewCancel() { stopReview(); render(); },
+  send() {
+    if (!S.review || S.review.left > 0 || S.busy) return;
+    const co = S.co;
     S.busy = true; S.msg = ''; render();
     const items = cartLines().map(l => ({ id: l.p.id, qty: l.q }));
     api('order', Object.assign({ items, mode: co.mode, area: co.area, pay: co.pay, lat: co.lat, lng: co.lng, reward: calc().free ? S.reward : '', promo: S.promo.discount ? S.promo.code : '', note: (co.mode === 'delivery' && co.addr.trim() ? 'العنوان: ' + co.addr.trim() + (co.note ? ' | ' : '') : '') + co.note }, auth())).then(r => {
-      S.busy = false;
+      S.busy = false; stopReview();
       if (!r.ok) { S.msg = r.error || 'تعذر إرسال الطلب'; render(); return; }
       S.cart = {}; saveCart(); S.co.note = ''; S.promo = { code: '', discount: 0 }; S.reward = '';
+      S.msg = r.order && r.order.deferred ? 'تم إرسال طلبك ✓ المكتبة مغلقة الآن، ويُجهَّز طلبك صباحاً عند بدء الدوام.' : 'تم إرسال طلبك ✓';
       loadStatus('orders');
     });
   },
   orders() { loadStatus('orders'); },
-  loyalty() { loadStatus('loyalty'); }
+  loyalty() { loadStatus('loyalty'); },
+  branches() { go('branches'); }
 };
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]');
   if (b && ACT[b.dataset.act]) ACT[b.dataset.act](b.dataset);
 });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.review && !S.busy) { stopReview(); render(); } });
 document.addEventListener('change', e => {
   if (e.target.dataset.change === 'area') { syncCo(); render(); }
   if (e.target.id === 'f-photo' && e.target.files && e.target.files[0]) {
@@ -582,6 +684,8 @@ document.addEventListener('change', e => {
     im.src = url;
   }
 });
+let wasClosed = null;
+setInterval(() => { const c = isClosed(); if (wasClosed !== null && c !== wasClosed && !S.review && (S.view === 'home' || S.view === 'checkout')) render(); wasClosed = c; }, 30000);
 setInterval(() => {
   const el = document.getElementById('ad');
   if (el && S.cat && S.cat.ads.length > 1) {

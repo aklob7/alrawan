@@ -29,7 +29,7 @@ label{font-weight:800;display:block;margin-bottom:4px}
 input,select{font:inherit;width:100%;min-height:52px;padding:10px 12px;border:2px solid #bbb;border-radius:12px;background:#fff;color:var(--ink)}
 input:focus,select:focus,button:focus-visible{outline:3px solid var(--red);outline-offset:2px}
 .card{border:2px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px}
-.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .tabs button{min-height:46px;font-size:15px}
 .tabs .on{background:var(--ink);color:#fff}
 .msg{padding:10px 12px;border-radius:12px;font-weight:700;background:#fdecec;color:#8a0a0f}
@@ -66,7 +66,7 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
   set(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 };
-const S = { auth: store.get('rw_admin', null), view: 'login', d: null, tab: 'items', q: '', f: '', edit: null, img: '', imgNew: '', msg: '', good: false, busy: false, setup: false, ads: [] };
+const S = { branches: [], auth: store.get('rw_admin', null), view: 'login', d: null, tab: 'items', q: '', f: '', edit: null, img: '', imgNew: '', msg: '', good: false, busy: false, setup: false, ads: [] };
 
 function api(action, data) {
   if (!API) return Promise.resolve({ ok: false, error: 'رابط الخادم غير موجود في config.js' });
@@ -138,9 +138,9 @@ const V = {
   main() {
     const own = S.d.role === 'owner';
     $('ttl').textContent = own ? 'لوحة الروان · صاحب المكتبة' : 'لوحة الروان · الموظف';
-    const tabs = own ? '<div class="tabs">' + [['items', 'المنتجات'], ['ads', 'الإعلانات'], ['staff', 'الموظف']].map(t =>
+    const tabs = own ? '<div class="tabs">' + [['items', 'المنتجات'], ['ads', 'الإعلانات'], ['branches', 'الفروع'], ['staff', 'الموظف']].map(t =>
       '<button class="' + (S.tab === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' : '';
-    return tabs + msg() + (S.tab === 'ads' && own ? V.ads() : S.tab === 'staff' && own ? V.staff() : V.items());
+    return tabs + msg() + (S.tab === 'ads' && own ? V.ads() : S.tab === 'branches' && own ? V.branches() : S.tab === 'staff' && own ? V.staff() : V.items());
   },
   items() {
     const q = S.q.trim(), list = S.d.products.filter(p => (!S.f || p.sec === S.f) && (!q || (p.name + ' ' + p.l1 + ' ' + p.l2).includes(q)));
@@ -187,6 +187,15 @@ const V = {
         '<input data-ad="' + i + '" value="' + esc(a.text) + '" placeholder="نص تحت الصورة (اختياري)" aria-label="نص الإعلان">' +
         '<button class="small" data-act="delAd" data-v="' + i + '">حذف هذا الإعلان</button></div>').join('') : '<div class="card"><p>لا توجد إعلانات.</p></div>');
   },
+  branches() {
+    return '<p class="hint">تظهر في تطبيق الزبون من القائمة الجانبية ← فروع الروان. للموقع: افتح خرائط Google على مكان الفرع ← مشاركة ← نسخ الرابط، والصقه هنا.</p>' +
+      '<button class="red" data-act="addBr">+ إضافة فرع</button>' +
+      (S.branches.length ? S.branches.map((b, i) => '<div class="ad">' +
+        '<input data-b="' + i + '" data-f="name" value="' + esc(b.name) + '" placeholder="اسم الفرع (مثال: فرع زيونة)" aria-label="اسم الفرع">' +
+        '<input data-b="' + i + '" data-f="phone" value="' + esc(b.phone) + '" placeholder="رقم الهاتف" inputmode="tel" dir="ltr" aria-label="رقم الهاتف">' +
+        '<input data-b="' + i + '" data-f="map" value="' + esc(b.map) + '" placeholder="رابط الموقع من خرائط Google" dir="ltr" aria-label="رابط الموقع">' +
+        '<button class="small" data-act="delBr" data-v="' + i + '">حذف هذا الفرع</button></div>').join('') : '<div class="card"><p>لا توجد فروع بعد.</p></div>');
+  },
   staff() {
     return '<div class="card"><h2>كلمة سر الموظف</h2><p class="hint">الموظف يستطيع فقط إضافة المنتجات وتعديل الاسم والسعر والصورة. ' +
       (S.d.hasStaff ? 'توجد كلمة سر حالياً؛ كتابة جديدة تلغي القديمة وتخرج الموظف.' : 'لم تُضبط بعد.') + '</p>' +
@@ -202,6 +211,7 @@ function render() {
   const bar = $('bar');
   let b = '';
   if (S.view === 'form') b = '<button class="red" data-act="save"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الرفع…' : '⬆ رفع ونشر في التطبيق') + '</button>';
+  if (S.view === 'main' && S.tab === 'branches') b = '<button class="red" data-act="saveBr"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الرفع…' : '⬆ رفع الفروع') + '</button>';
   if (S.view === 'main' && S.tab === 'ads') b = '<button class="red" data-act="saveAds"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الرفع…' : '⬆ رفع الإعلانات') + '</button>';
   bar.hidden = !b; bar.innerHTML = b;
   hydrate();
@@ -210,7 +220,7 @@ function load() {
   S.view = 'loading'; render();
   api('admin_get').then(r => {
     if (!r.ok) { S.view = S.d && S.auth ? 'main' : 'login'; say(r.error || 'تعذر التحميل'); render(); return; }
-    S.d = r; S.ads = (r.ads || []).map(a => ({ text: a.text || '', img: a.img || '' }));
+    S.d = r; S.ads = (r.ads || []).map(a => ({ text: a.text || '', img: a.img || '' })); S.branches = (r.branches || []).map(b => ({ name: b.name || '', phone: b.phone || '', map: b.map || '' }));
     S.view = 'main'; render();
   });
 }
@@ -219,6 +229,7 @@ function keepForm() {
   if (!S.edit) return;
   ['name', 'price', 'l1', 'l2'].forEach(k => { const e = $('e-' + k); if (e) S.edit[k] = e.value; });
 }
+function keepBr() { document.querySelectorAll('[data-b]').forEach(e => { S.branches[+e.dataset.b][e.dataset.f] = e.value; }); }
 function keepAds() { document.querySelectorAll('[data-ad]').forEach(e => { S.ads[+e.dataset.ad].text = e.value; }); }
 
 const ACT = {
@@ -240,7 +251,7 @@ const ACT = {
     api('admin_login', { password }).then(done);
   },
   logout() { S.auth = null; store.set('rw_admin', null); S.d = null; S.view = 'login'; S.setup = false; say(''); render(); },
-  tab(d) { if (S.tab === 'ads') keepAds(); S.tab = d.v; say(''); render(); },
+  tab(d) { if (S.tab === 'ads') keepAds(); if (S.tab === 'branches') keepBr(); S.tab = d.v; say(''); render(); },
   add() { S.edit = { id: '', sec: S.f, l1: '', l2: '', name: '', price: '', img: '' }; S.imgNew = ''; say(''); openForm(); },
   edit(d) { const p = S.d.products.find(x => x.id === d.v); if (!p) return; S.edit = Object.assign({}, p); S.imgNew = ''; say(''); openForm(); },
   back() { if (history.state && history.state.form) history.back(); else closeForm(); },
@@ -280,6 +291,15 @@ const ACT = {
       if (!r.ok) throw new Error(r.error || 'تعذر الحفظ');
       S.busy = false; say('تم رفع الإعلانات ✓', true); render();
     }).catch(err => { S.busy = false; say(err.message); render(); });
+  },
+  addBr() { keepBr(); S.branches.push({ name: '', phone: '', map: '' }); say(''); render(); const n = document.querySelector('[data-b="' + (S.branches.length - 1) + '"]'); if (n) n.focus(); },
+  delBr(d) { keepBr(); S.branches.splice(+d.v, 1); say('حُذف من القائمة. اضغط "رفع الفروع" للحفظ.', true); render(); },
+  saveBr() {
+    keepBr();
+    const bad = S.branches.find(b => b.map.trim() && !/^https:\/\/([\w-]+\.)*(google\.[a-z.]+|goo\.gl)\//.test(b.map.trim()));
+    if (bad) { say('رابط الموقع لـ "' + (bad.name || 'فرع') + '" ليس رابط خرائط Google. انسخه من زر "مشاركة" في الخرائط.'); render(); return; }
+    S.busy = true; say(''); render();
+    api('admin_branches', { branches: S.branches.filter(b => b.name.trim()) }).then(r => { S.busy = false; say(r.ok ? 'تم رفع الفروع ✓ تظهر في التطبيق الآن.' : (r.error || 'تعذر الحفظ'), r.ok); render(); });
   },
   delAsk() { keepForm(); S.delAsk = true; say(''); render(); window.scrollTo(0, document.body.scrollHeight); },
   delNo() { S.delAsk = false; render(); },
