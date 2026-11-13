@@ -20,7 +20,7 @@ header h1{font-size:19px;flex:1}
 header .dot{width:10px;height:10px;border-radius:50%;background:#2ecc71;box-shadow:0 0 0 3px rgba(46,204,113,.3)}
 header button{width:auto;min-height:36px;padding:2px 12px;font-size:14px;background:#fff;color:var(--ink);border:none}
 main{max-width:600px;margin:0 auto;padding:14px;display:flex;flex-direction:column;gap:12px;padding-bottom:40px}
-button,.btn{font:inherit;font-weight:800;border-radius:14px;min-height:54px;padding:10px 14px;width:100%;cursor:pointer;border:2px solid var(--ink);background:#fff;color:var(--ink);text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px}
+button,.btn{touch-action:manipulation;-webkit-tap-highlight-color:transparent;font:inherit;font-weight:800;border-radius:14px;min-height:54px;padding:10px 14px;width:100%;cursor:pointer;border:2px solid var(--ink);background:#fff;color:var(--ink);text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px}
 button:disabled{opacity:.5}
 .red{background:var(--red);border-color:var(--red);color:#fff}
 .black{background:var(--ink);color:#fff}
@@ -170,14 +170,25 @@ const ACT = {
       reason = s === 'other' ? t : s;
       if (!reason) { say('اختر سبب الإرجاع'); render(); return; }
     }
-    S.busy = true; render();
+    const T = { accept: 'الطلب معك الآن ✓ اذهب إلى المكتبة.', arrive: 'تم ✓ المكتبة تعرف أنك وصلت.', pickup: 'تم ✓ الطلب في الطريق للزبون.', deliver: 'تم التسليم ✓ شكراً لك.', return: 'سُجّل الطلب راجعاً.' };
+    const snap = JSON.stringify(S.d), m = S.d.mine.find(x => x.no === d.v);
+    S.ask = null;
+    if (d.a === 'accept') { S.busy = true; say('جارِ تثبيت الطلب لك…', true); }
+    else if (m) {
+      if (d.a === 'arrive') m.stage = 'arrived';
+      if (d.a === 'pickup') m.stage = 'picked';
+      if (d.a === 'deliver' || d.a === 'return') {
+        S.d.mine = S.d.mine.filter(x => x !== m); m.status = d.a === 'deliver' ? 'تم التسليم' : 'راجع'; m.reason = reason;
+        S.d.done.unshift(m); if (d.a === 'deliver' && m.pay === 'cod') S.d.cash += m.total; S.tab = 'done';
+      }
+      say(T[d.a], true);
+    }
+    render(); window.scrollTo(0, 0);
     api('cap_act', { no: d.v, act: d.a, reason }).then(r => {
-      S.busy = false; S.ask = null;
-      const T = { accept: 'الطلب معك الآن ✓ اذهب إلى المكتبة.', arrive: 'تم ✓ المكتبة تعرف أنك وصلت.', pickup: 'تم ✓ الطلب في الطريق للزبون.', deliver: 'تم التسليم ✓ شكراً لك.', return: 'سُجّل الطلب راجعاً.' };
-      say(r.ok ? T[d.a] : (r.error || 'تعذر التنفيذ'), r.ok);
-      if (r.ok && d.a === 'accept') S.tab = 'mine';
-      if (r.ok && (d.a === 'deliver' || d.a === 'return')) S.tab = 'done';
-      load(true).then(() => { render(); window.scrollTo(0, 0); });
+      S.busy = false;
+      if (!r.ok) { S.d = JSON.parse(snap); say(r.error || 'تعذر التنفيذ، أعد المحاولة'); render(); load(true); return; }
+      if (d.a === 'accept') { say(T.accept, true); S.tab = 'mine'; }
+      load(true).then(() => render());
     });
   }
 };

@@ -59,7 +59,7 @@ body{background:radial-gradient(130% 70% at 50% 0%,#F4333A 0%,#D91219 42%,#A90D1
 h1{text-shadow:0 2px 0 rgba(0,0,0,.22)}
 h2{text-shadow:0 2px 0 rgba(0,0,0,.2)}
 .card{box-shadow:0 7px 0 #D6D6D6,0 18px 26px rgba(0,0,0,.3)}
-button,.btn{transition:transform .1s ease,box-shadow .1s ease}
+button,.btn{transition:transform .06s ease,box-shadow .06s ease;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .b-red{background:linear-gradient(#F0303A,#D91219);box-shadow:0 5px 0 #8A0A10,0 10px 16px rgba(0,0,0,.22)}
 .b-white{box-shadow:0 5px 0 #CFCFCF,0 12px 18px rgba(0,0,0,.28)}
 .b-black{background:linear-gradient(#2B2B2B,#111);box-shadow:0 5px 0 #000,0 12px 18px rgba(0,0,0,.3)}
@@ -142,10 +142,10 @@ body.hasbar #app{padding-bottom:96px}
 .dots{display:flex;gap:6px}.dots i{width:7px;height:7px;border-radius:4px;background:#111}.dots i.on{width:22px;background:var(--red)}
 @keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 @keyframes flipIn{from{opacity:0;transform:perspective(700px) rotateX(-58deg) translateY(26px)}to{opacity:1;transform:none}}
-.enter>*{animation:rise .4s ease-out both}
-.enter>*:nth-child(2){animation-delay:.05s}.enter>*:nth-child(3){animation-delay:.1s}.enter>*:nth-child(4){animation-delay:.15s}.enter>*:nth-child(n+5){animation-delay:.2s}
-.enter .tile{animation:flipIn .5s cubic-bezier(.2,.9,.3,1.15) both;transform-origin:50% 100%}
-.enter .tile:nth-child(2){animation-delay:.06s}.enter .tile:nth-child(3){animation-delay:.12s}.enter .tile:nth-child(4){animation-delay:.18s}.enter .tile:nth-child(5){animation-delay:.24s}.enter .tile:nth-child(6){animation-delay:.3s}.enter .tile:nth-child(n+7){animation-delay:.36s}
+.enter>*{animation:rise .18s ease-out both}
+.enter>*:nth-child(2){animation-delay:.02s}.enter>*:nth-child(3){animation-delay:.04s}.enter>*:nth-child(4){animation-delay:.06s}.enter>*:nth-child(n+5){animation-delay:.08s}
+.enter .tile{animation:flipIn .28s cubic-bezier(.2,.9,.3,1.15) both;transform-origin:50% 100%}
+.enter .tile:nth-child(2){animation-delay:.03s}.enter .tile:nth-child(3){animation-delay:.06s}.enter .tile:nth-child(4){animation-delay:.09s}.enter .tile:nth-child(5){animation-delay:.12s}.enter .tile:nth-child(6){animation-delay:.15s}.enter .tile:nth-child(n+7){animation-delay:.18s}
 @media (prefers-reduced-motion:reduce){.spin,.splash,.stamp.new,.enter>*,.enter .tile{animation:none}button,.btn{transition:none}}
 </style>
 </head>
@@ -472,7 +472,7 @@ const V = {
       '<button class="' + (co.mode === 'delivery' && !co.lat ? 'b-line' : 'b-white') + '" data-act="confirm"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الإرسال…' : 'تأكيد الطلب') + '</button>';
   },
   orders() {
-    return head('السجل', 'home') + msg() + '<button class="b-white" data-act="orders">تحديث</button>' +
+    return head('السجل', 'home') + msg() + '<button class="b-white" data-act="orders">' + (S.loading ? 'جارِ التحديث…' : 'تحديث') + '</button>' +
       (S.orders.length ? S.orders.map(o =>
         '<div class="card"><div class="row"><strong class="grow">طلب ' + esc(o.no) + '</strong><span class="tag">' + esc(o.status) + '</span></div>' +
         '<p style="font-weight:800">' + esc(STATUS_TEXT[o.status] || o.status) + '</p>' +
@@ -544,9 +544,12 @@ function syncCo() {
   if (n) S.co.note = n.value;
 }
 function loadStatus(view) {
+  const keep = S.msg;
+  S.view = view; S.anim = true; S.drawer = false; S.loading = true; render(); S.msg = keep;
   api('status', auth()).then(r => {
+    S.loading = false;
     if (r.ok) gotStatus(r); else S.msg = r.error || 'تعذر التحميل';
-    S.view = view; S.anim = true; S.drawer = false; render();
+    if (S.view === view && !S.review) render();
   });
 }
 
@@ -653,7 +656,7 @@ const ACT = {
   reviewCancel() { stopReview(); render(); },
   send() {
     if (!S.review || S.review.left > 0 || S.busy) return;
-    const co = S.co;
+    const co = S.co, sentItems = cartLines().map(l => l.p.name + ' × ' + l.q).join('، ');
     S.busy = true; S.msg = ''; render();
     const items = cartLines().map(l => ({ id: l.p.id, qty: l.q }));
     api('order', Object.assign({ items, mode: co.mode, area: co.area, pay: co.pay, lat: co.lat, lng: co.lng, reward: calc().free ? S.reward : '', promo: S.promo.discount ? S.promo.code : '', note: (co.mode === 'delivery' && co.addr.trim() ? 'العنوان: ' + co.addr.trim() + (co.note ? ' | ' : '') : '') + co.note }, auth())).then(r => {
@@ -661,6 +664,7 @@ const ACT = {
       if (!r.ok) { S.msg = r.error || 'تعذر إرسال الطلب'; render(); return; }
       S.cart = {}; saveCart(); S.co.note = ''; S.promo = { code: '', discount: 0 }; S.reward = '';
       S.msg = r.order && r.order.deferred ? 'تم إرسال طلبك ✓ المكتبة مغلقة الآن، ويُجهَّز طلبك صباحاً عند بدء الدوام.' : 'تم إرسال طلبك ✓';
+      if (r.order) S.orders = [{ no: r.order.no, date: '', items: sentItems, total: r.order.total, pay: co.pay, status: r.order.deferred ? 'مؤجل' : 'جديد' }].concat(S.orders || []);
       loadStatus('orders');
     });
   },

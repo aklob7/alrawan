@@ -22,7 +22,7 @@ header button{width:auto;min-height:36px;padding:2px 12px;font-size:14px;backgro
 main{max-width:720px;margin:0 auto;padding:14px;display:flex;flex-direction:column;gap:12px;padding-bottom:40px}
 h2{font-size:19px}
 h3{font-size:16px;margin-top:4px}
-button,.btn{font:inherit;font-weight:800;border-radius:14px;min-height:52px;padding:10px 16px;width:100%;cursor:pointer;border:2px solid var(--ink);background:#fff;color:var(--ink);text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px}
+button,.btn{touch-action:manipulation;-webkit-tap-highlight-color:transparent;font:inherit;font-weight:800;border-radius:14px;min-height:52px;padding:10px 16px;width:100%;cursor:pointer;border:2px solid var(--ink);background:#fff;color:var(--ink);text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px}
 button:disabled{opacity:.5}
 .red{background:var(--red);border-color:var(--red);color:#fff}
 .black{background:var(--ink);color:#fff}
@@ -188,11 +188,12 @@ const ACT = {
     const reason = d.to === 'مرفوض' ? ($('rj') ? $('rj').value.trim() : '') : '';
     if (d.to === 'مرفوض' && !reason) { say('اكتب سبب الرفض'); render(); return; }
     S.seen = S.seen.concat([d.v]).slice(-300); store.set('rw_ord_seen', S.seen);
-    S.busy = true;
+    const o = (S.orders || []).find(x => x.no === d.v), was = o && o.status;
+    if (o) { o.status = d.to; if (reason) o.reason = reason; }
+    S.rej = ''; say('تم ✓ ' + d.v + ' ← ' + d.to, true); render();
     api('admin_status', { no: d.v, to: d.to, reason }).then(r => {
-      S.busy = false; S.rej = '';
-      say(r.ok ? 'تم ✓ ' + d.v + ' ← ' + d.to : (r.error || 'تعذر التحديث'), r.ok);
-      load(true).then(render);
+      if (!r.ok) { if (o) o.status = was; say(r.error || 'تعذر التحديث، أعد المحاولة'); render(); }
+      load(true);
     });
   }
 };
