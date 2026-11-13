@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111111">
+<meta name="robots" content="noindex">
+<title>كابتن الروان</title>
+<link rel="manifest" href="captain.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon2.png">
+<link rel="icon" href="icon2-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--red:#D91219;--ink:#111;--line:#e3e3e3;--soft:#f6f6f6;--ok:#127a3a}
+*{box-sizing:border-box;margin:0}
+body{font-family:Cairo,system-ui,sans-serif;background:#f2f2f2;color:var(--ink);font-size:17px;line-height:1.5}
+header{background:var(--ink);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:3}
+header h1{font-size:19px;flex:1}
+header .dot{width:10px;height:10px;border-radius:50%;background:#2ecc71;box-shadow:0 0 0 3px rgba(46,204,113,.3)}
+header button{width:auto;min-height:36px;padding:2px 12px;font-size:14px;background:#fff;color:var(--ink);border:none}
+main{max-width:600px;margin:0 auto;padding:14px;display:flex;flex-direction:column;gap:12px;padding-bottom:40px}
+button,.btn{font:inherit;font-weight:800;border-radius:14px;min-height:54px;padding:10px 14px;width:100%;cursor:pointer;border:2px solid var(--ink);background:#fff;color:var(--ink);text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px}
+button:disabled{opacity:.5}
+.red{background:var(--red);border-color:var(--red);color:#fff}
+.black{background:var(--ink);color:#fff}
+.green{background:var(--ok);border-color:var(--ok);color:#fff}
+label{font-weight:800;display:block;margin-bottom:4px}
+input,select,textarea{font:inherit;width:100%;min-height:52px;padding:10px 12px;border:2px solid #bbb;border-radius:12px;background:#fff;color:var(--ink)}
+input:focus,select:focus,textarea:focus,button:focus-visible,.btn:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.card{background:#fff;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.card.hot{border:3px solid var(--red)}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.tabs button{min-height:46px;font-size:15px}
+.tabs .on{background:var(--ink);color:#fff}
+.msg{padding:10px 12px;border-radius:12px;font-weight:700;background:#fdecec;color:#8a0a0f}
+.msg.good{background:#e6f5ec;color:var(--ok)}
+.hint{color:#555;font-size:14px}
+.top{display:flex;align-items:center;gap:8px}
+.top b{font-size:19px}
+.ln{display:flex;justify-content:space-between;gap:8px}
+.it{font-weight:700;white-space:pre-line;background:var(--soft);border-radius:10px;padding:8px 10px}
+.cash{font-size:24px;font-weight:900;color:var(--red)}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.steps{display:flex;gap:4px}.steps i{flex:1;height:6px;border-radius:3px;background:#ddd}.steps i.on{background:var(--red)}
+.tag{border-radius:999px;padding:2px 10px;font-size:13px;font-weight:800;background:var(--soft);border:1.5px solid #ccc;margin-inline-start:auto}
+.tag.g{background:#e6f5ec;color:var(--ok);border-color:#9fd6b2}
+</style>
+</head>
+<body>
+<header><span class="dot" id="dot" aria-hidden="true"></span><h1>كابتن الروان</h1><span id="hbtn"></span></header>
+<main id="app" aria-live="polite"></main>
+<script src="config.js"></script>
+<script>
+'use strict';
+const API = window.RAWAN_API || '';
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const money = n => Number(n || 0).toLocaleString('en-US') + ' د.ع';
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+const S = { auth: store.get('rw_cap', null), tab: 'avail', d: null, v: '', msg: '', good: false, busy: false, ask: null };
+
+function api(action, data) {
+  if (!API) return Promise.resolve({ ok: false, error: 'رابط الخادم غير موجود' });
+  return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ action, admin: S.auth && S.auth.token }, data || {})) })
+    .then(r => r.json()).catch(() => ({ ok: false, error: 'تعذر الاتصال. تحقق من الإنترنت.' }))
+    .then(r => { if (r.auth) { S.auth = null; store.set('rw_cap', null); S.d = null; } return r; });
+}
+function say(t, good) { S.msg = t; S.good = !!good; }
+function msg() { return S.msg ? '<p class="msg' + (S.good ? ' good' : '') + '" role="alert">' + esc(S.msg) + '</p>' : ''; }
+const items = s => esc(String(s).split('، ').join('\n'));
+const tm = d => esc(String(d).split(' ')[1] || d);
+
+function loginView() {
+  return '<div class="card"><h2>دخول الكابتن</h2>' +
+    '<div><label for="c-phone">رقم الهاتف</label><input id="c-phone" type="tel" inputmode="numeric" dir="ltr" autocomplete="username" placeholder="07XXXXXXXXX"></div>' +
+    '<div><label for="c-pw">كلمة السر</label><input id="c-pw" type="password" autocomplete="current-password"></div>' +
+    msg() + '<button class="red" data-act="login"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الدخول…' : 'دخول') + '</button>' +
+    '<p class="hint">رقمك وكلمة سرك تحصل عليهما من مكتبة الروان.</p></div>';
+}
+function availCard(o) {
+  return '<div class="card hot"><div class="top"><b>' + esc(o.no) + '</b><span class="hint">' + tm(o.date) + '</span><span class="tag">' + esc(o.area || 'توصيل') + '</span></div>' +
+    '<div class="it">' + items(o.items) + '</div>' +
+    '<div class="ln"><span>' + (o.pay === 'online' ? 'مدفوع إلكترونياً' : 'تستلم من الزبون') + '</span><b>' + (o.pay === 'online' ? '—' : money(o.total)) + '</b></div>' +
+    '<button class="red" data-act="go" data-v="' + esc(o.no) + '" data-a="accept"' + (S.busy ? ' disabled' : '') + '>✓ أقبل الطلب</button></div>';
+}
+const STEP = { accepted: 1, arrived: 2, picked: 3 };
+function mineCard(o) {
+  const n = STEP[o.stage] || 1, ask = S.ask && S.ask.no === o.no ? S.ask : null;
+  let b = '';
+  if (ask && ask.a === 'deliver') b = '<p style="font-weight:800">' + (o.pay === 'online' ? 'الطلب مدفوع. سلّمه بدون استلام مال؟' : 'هل استلمت ' + money(o.total) + ' من الزبون؟') + '</p>' +
+    '<div class="btns"><button class="green" data-act="go" data-v="' + esc(o.no) + '" data-a="deliver">نعم، تم التسليم</button><button data-act="ask" data-v="">رجوع</button></div>';
+  else if (ask && ask.a === 'return') b = '<div><label for="rs">سبب الإرجاع</label><select id="rs"><option value="">اختر السبب</option><option>الزبون لا يرد</option><option>الزبون رفض الاستلام</option><option>العنوان خاطئ أو غير موجود</option><option>الزبون طلب الإلغاء</option><option value="other">سبب آخر</option></select></div>' +
+    '<input id="rs2" placeholder="اكتب السبب إن اخترت سبباً آخر">' +
+    '<div class="btns"><button class="red" data-act="go" data-v="' + esc(o.no) + '" data-a="return">تأكيد: الطلب راجع</button><button data-act="ask" data-v="">رجوع</button></div>';
+  else if (o.stage === 'accepted') b = '<button class="black" data-act="go" data-v="' + esc(o.no) + '" data-a="arrive">📍 وصلت إلى المكتبة</button>';
+  else if (o.stage === 'arrived') b = '<button class="red" data-act="go" data-v="' + esc(o.no) + '" data-a="pickup">📦 تم استلام الطلب من المكتبة</button>';
+  else b = '<div class="btns"><button class="green" data-act="ask" data-v="' + esc(o.no) + '" data-a="deliver">✅ تم التسليم</button><button data-act="ask" data-v="' + esc(o.no) + '" data-a="return">↩️ راجع</button></div>';
+  return '<div class="card"><div class="top"><b>' + esc(o.no) + '</b><span class="hint">' + tm(o.date) + '</span><span class="tag">' + esc(o.area || '') + '</span></div>' +
+    '<div class="steps" aria-label="المرحلة ' + n + ' من 4"><i class="on"></i><i' + (n > 1 ? ' class="on"' : '') + '></i><i' + (n > 2 ? ' class="on"' : '') + '></i><i></i></div>' +
+    '<div class="ln"><b>' + esc(o.name) + '</b><span dir="ltr">' + esc(o.phone) + '</span></div>' +
+    '<div class="btns"><a class="btn" href="tel:' + esc(o.phone) + '">📞 اتصال بالزبون</a>' + (o.loc ? '<a class="btn" href="' + esc(o.loc) + '" target="_blank" rel="noopener">🗺️ الموقع</a>' : '<span class="hint">لا يوجد موقع</span>') + '</div>' +
+    '<div class="it">' + items(o.items) + '</div>' + (o.note ? '<p class="hint">ملاحظة: ' + esc(o.note) + '</p>' : '') +
+    '<div class="ln"><span>' + (o.pay === 'online' ? 'مدفوع إلكترونياً' : 'تستلم من الزبون') + '</span><b class="cash" style="font-size:20px">' + (o.pay === 'online' ? '0 د.ع' : money(o.total)) + '</b></div>' + b + '</div>';
+}
+function mainView() {
+  const d = S.d;
+  const tabs = '<div class="tabs">' + [['avail', 'متاحة (' + d.avail.length + ')'], ['mine', 'طلباتي (' + d.mine.length + ')'], ['done', 'اليوم (' + d.done.length + ')']].map(t =>
+    '<button class="' + (S.tab === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>';
+  let body = '';
+  if (S.tab === 'avail') body = d.avail.length ? d.avail.map(availCard).join('') : '<div class="card"><p style="font-weight:800">لا توجد طلبات متاحة الآن.</p><p class="hint">تتحدث القائمة تلقائياً، ويصدر صوت عند وصول طلب جديد.</p></div>';
+  if (S.tab === 'mine') body = d.mine.length ? d.mine.map(mineCard).join('') : '<div class="card"><p style="font-weight:800">ليس معك طلبات الآن.</p></div>';
+  if (S.tab === 'done') body = '<div class="card"><p>المبلغ الذي معك من طلبات اليوم:</p><p class="cash">' + money(d.cash) + '</p><p class="hint">سلّمه للمكتبة آخر الدوام.</p></div>' +
+    d.done.map(o => '<div class="card"><div class="top"><b>' + esc(o.no) + '</b><span class="tag' + (o.status === 'تم التسليم' ? ' g' : '') + '">' + esc(o.status) + '</span></div>' +
+      '<div class="ln"><span>' + esc(o.name) + '</span><b>' + (o.pay === 'online' ? 'مدفوع' : money(o.total)) + '</b></div>' + (o.reason ? '<p class="hint">السبب: ' + esc(o.reason) + '</p>' : '') + '</div>').join('');
+  return tabs + msg() + body;
+}
+function render() {
+  const keep = document.activeElement && document.activeElement.id;
+  $('app').innerHTML = !S.auth ? loginView() : !S.d ? '<div class="card"><p style="font-weight:800">جارِ التحميل…</p></div>' : mainView();
+  $('hbtn').innerHTML = S.auth ? '<button data-act="logout">خروج</button>' : '';
+  if (keep && $(keep)) $(keep).focus();
+}
+function beep() {
+  try { if (navigator.vibrate) navigator.vibrate([300, 120, 300]); } catch (e) {}
+  try {
+    const A = window.AudioContext || window.webkitAudioContext; if (!A) return;
+    const c = beep.c || (beep.c = new A()), t = c.currentTime;
+    [0, 0.3, 0.6].forEach(d => { const o = c.createOscillator(), g = c.createGain(); o.frequency.value = 990; g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.35, t + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.22); o.connect(g); g.connect(c.destination); o.start(t + d); o.stop(t + d + 0.25); });
+  } catch (e) {}
+}
+let known = null;
+function load(quiet) {
+  return api('cap_orders').then(r => {
+    $('dot').style.background = r.ok ? '#2ecc71' : '#e67e22';
+    if (!r.ok) { if (!quiet || r.auth) { say(r.error || 'تعذر التحميل'); render(); } return; }
+    const ids = r.avail.map(o => o.no);
+    if (known && ids.some(n => !known.includes(n))) { beep(); if (S.tab !== 'mine') S.tab = 'avail'; }
+    known = ids; S.d = r; S.v = r.v;
+    if (!(S.ask && document.activeElement && /^(rs|rs2)$/.test(document.activeElement.id))) render();
+  });
+}
+setInterval(() => {
+  if (!S.auth || document.hidden) return;
+  api('ping').then(r => { if (r.ok && r.v !== S.v) load(true); else $('dot').style.background = r.ok ? '#2ecc71' : '#e67e22'; });
+}, 12000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && S.auth) load(true); });
+
+const ACT = {
+  login() {
+    const phone = $('c-phone').value.replace(/\s/g, ''), password = $('c-pw').value;
+    if (!/^07\d{9}$/.test(phone) || !password) { say('اكتب رقم الهاتف وكلمة السر'); render(); return; }
+    S.busy = true; say(''); render();
+    api('cap_login', { phone, password }).then(r => {
+      S.busy = false;
+      if (!r.ok) { say(r.error || 'تعذر الدخول'); render(); return; }
+      S.auth = { token: r.token, name: r.name }; store.set('rw_cap', S.auth); beep.c = null; say('أهلاً ' + r.name, true); render(); load();
+    });
+  },
+  logout() { S.auth = null; store.set('rw_cap', null); S.d = null; known = null; say(''); render(); },
+  tab(d) { S.tab = d.v; S.ask = null; say(''); render(); window.scrollTo(0, 0); },
+  ask(d) { S.ask = d.v ? { no: d.v, a: d.a } : null; render(); },
+  go(d) {
+    let reason = '';
+    if (d.a === 'return') {
+      const s = $('rs').value, t = $('rs2').value.trim();
+      reason = s === 'other' ? t : s;
+      if (!reason) { say('اختر سبب الإرجاع'); render(); return; }
+    }
+    S.busy = true; render();
+    api('cap_act', { no: d.v, act: d.a, reason }).then(r => {
+      S.busy = false; S.ask = null;
+      const T = { accept: 'الطلب معك الآن ✓ اذهب إلى المكتبة.', arrive: 'تم ✓ المكتبة تعرف أنك وصلت.', pickup: 'تم ✓ الطلب في الطريق للزبون.', deliver: 'تم التسليم ✓ شكراً لك.', return: 'سُجّل الطلب راجعاً.' };
+      say(r.ok ? T[d.a] : (r.error || 'تعذر التنفيذ'), r.ok);
+      if (r.ok && d.a === 'accept') S.tab = 'mine';
+      if (r.ok && (d.a === 'deliver' || d.a === 'return')) S.tab = 'done';
+      load(true).then(() => { render(); window.scrollTo(0, 0); });
+    });
+  }
+};
+document.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && ACT[b.dataset.act] && !b.disabled) ACT[b.dataset.act](b.dataset); });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.target.id === 'c-pw' || e.target.id === 'c-phone')) ACT.login(); });
+render();
+if (S.auth) load();
+</script>
+</body>
+</html>

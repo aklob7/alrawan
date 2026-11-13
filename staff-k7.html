@@ -29,7 +29,24 @@ label{font-weight:800;display:block;margin-bottom:4px}
 input,select{font:inherit;width:100%;min-height:52px;padding:10px 12px;border:2px solid #bbb;border-radius:12px;background:#fff;color:var(--ink)}
 input:focus,select:focus,button:focus-visible{outline:3px solid var(--red);outline-offset:2px}
 .card{border:2px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px}
-.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.tabs.two{grid-template-columns:repeat(2,1fr)}
+.ord{border:2px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;background:#fff}
+.ord.new{border-color:var(--red);box-shadow:0 0 0 3px rgba(217,18,25,.12)}
+.ord .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tag{display:inline-block;border-radius:999px;padding:2px 10px;font-size:13px;font-weight:800;background:var(--soft);border:1.5px solid #ccc}
+.tag.r{background:var(--red);color:#fff;border-color:var(--red)}
+.tag.g{background:#e6f5ec;color:var(--ok);border-color:#9fd6b2}
+.tag.n{background:#1B1F3A;color:#fff;border-color:#1B1F3A}
+.ord .it{font-weight:700;white-space:pre-line}
+.ord .ln{display:flex;justify-content:space-between;gap:8px;font-size:15px}
+.ord a{color:var(--red);font-weight:800}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btns.one{grid-template-columns:1fr}
+h3{font-size:16px;margin-top:4px}
+.sub{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sub button{min-height:42px;font-size:15px}
+.sub .on{background:var(--ink);color:#fff}
 .tabs button{min-height:46px;font-size:15px}
 .tabs .on{background:var(--ink);color:#fff}
 .msg{padding:10px 12px;border-radius:12px;font-weight:700;background:#fdecec;color:#8a0a0f}
@@ -66,7 +83,7 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
   set(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 };
-const S = { branches: [], auth: store.get('rw_admin', null), view: 'login', d: null, tab: 'items', q: '', f: '', edit: null, img: '', imgNew: '', msg: '', good: false, busy: false, setup: false, ads: [] };
+const S = { branches: [], orders: null, ov: '', oseen: store.get('rw_oseen', []), odone: false, rej: '', caps: null, capNew: false, capPw: '', auth: store.get('rw_admin', null), view: 'login', d: null, tab: 'orders', q: '', f: '', edit: null, img: '', imgNew: '', msg: '', good: false, busy: false, setup: false, ads: [] };
 
 function api(action, data) {
   if (!API) return Promise.resolve({ ok: false, error: 'رابط الخادم غير موجود في config.js' });
@@ -138,9 +155,40 @@ const V = {
   main() {
     const own = S.d.role === 'owner';
     $('ttl').textContent = own ? 'لوحة الروان · صاحب المكتبة' : 'لوحة الروان · الموظف';
-    const tabs = own ? '<div class="tabs">' + [['items', 'المنتجات'], ['ads', 'الإعلانات'], ['branches', 'الفروع'], ['staff', 'الموظف']].map(t =>
-      '<button class="' + (S.tab === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' : '';
-    return tabs + msg() + (S.tab === 'ads' && own ? V.ads() : S.tab === 'branches' && own ? V.branches() : S.tab === 'staff' && own ? V.staff() : V.items());
+    const list = own ? [['orders', 'الطلبات'], ['items', 'المنتجات'], ['ads', 'الإعلانات'], ['branches', 'الفروع'], ['caps', 'الكباتن'], ['staff', 'الموظف']] : [['orders', 'الطلبات'], ['items', 'المنتجات']];
+    const nNew = (S.orders || []).filter(o => o.status === 'جديد' || o.status === 'مؤجل').length;
+    const tabs = '<div class="tabs' + (own ? '' : ' two') + '">' + list.map(t =>
+      '<button class="' + (S.tab === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '">' + t[1] + (t[0] === 'orders' && nNew ? ' (' + nNew + ')' : '') + '</button>').join('') + '</div>';
+    return tabs + msg() + (S.tab === 'orders' ? V.orders() : S.tab === 'ads' && own ? V.ads() : S.tab === 'branches' && own ? V.branches() : S.tab === 'caps' && own ? V.caps() : S.tab === 'staff' && own ? V.staff() : V.items());
+  },
+  orders() {
+    if (!S.orders) return '<div class="card"><p style="font-weight:800">جارِ تحميل الطلبات…</p></div>';
+    const DONE = { 'تم التسليم': 1, 'مرفوض': 1, 'راجع': 1 };
+    const act = S.orders.filter(o => !DONE[o.status]), fin = S.orders.filter(o => DONE[o.status]);
+    const sub = '<div class="sub"><button class="' + (S.odone ? '' : 'on') + '" data-act="osub" data-v="0">الجارية (' + act.length + ')</button><button class="' + (S.odone ? 'on' : '') + '" data-act="osub" data-v="1">انتهت اليوم (' + fin.length + ')</button></div>';
+    if (S.odone) return sub + (fin.length ? fin.map(ordCard).join('') : '<div class="card"><p>لا شيء بعد اليوم.</p></div>');
+    const grp = (t, f) => { const xs = act.filter(f); return xs.length ? '<h3>' + t + ' (' + xs.length + ')</h3>' + xs.map(ordCard).join('') : ''; };
+    const body = grp('طلبات جديدة', o => o.status === 'جديد' || o.status === 'مؤجل') +
+      grp('قيد الإعداد', o => o.status === 'قيد الإعداد' || o.status === 'مقبول') +
+      grp('جاهزة / مع الكابتن', o => o.status === 'جاهز للاستلام' || o.status === 'قيد التوصيل' || o.status === 'في الطريق');
+    return sub + '<p class="hint">تتحدث تلقائياً كل ١٥ ثانية، ويصدر صوت عند وصول طلب جديد.</p>' + (body || '<div class="card"><p style="font-weight:800">لا توجد طلبات جارية الآن.</p></div>');
+  },
+  caps() {
+    const link = new URL('captain-q8.html', location.href).href;
+    if (!S.caps) return '<div class="card"><p style="font-weight:800">جارِ التحميل…</p></div>';
+    return '<div class="card"><h2>تطبيق كابتن الروان</h2><p class="hint">أرسل هذا الرابط للكابتن مع رقم هاتفه وكلمة سره. يفتحه في Chrome ثم "إضافة إلى الشاشة الرئيسية".</p>' +
+      '<input readonly dir="ltr" value="' + esc(link) + '" aria-label="رابط تطبيق الكابتن" onclick="this.select()"></div>' +
+      (S.capNew ? '<div class="card"><h2>كابتن جديد</h2>' +
+        '<div><label for="k-name">الاسم</label><input id="k-name"></div>' +
+        '<div><label for="k-phone">رقم الهاتف</label><input id="k-phone" inputmode="tel" dir="ltr" placeholder="07XXXXXXXXX"></div>' +
+        '<div><label for="k-pw">كلمة السر</label><input id="k-pw" dir="ltr" autocomplete="off"></div>' +
+        '<button class="red" data-act="capAdd"' + (S.busy ? ' disabled' : '') + '>حفظ الكابتن</button><button data-act="capNew" data-v="0">إلغاء</button></div>'
+        : '<button class="red" data-act="capNew" data-v="1">+ إضافة كابتن</button>') +
+      (S.caps.length ? S.caps.map(c => '<div class="ord"><div class="top"><b style="flex:1">' + esc(c.name) + '</b><span class="tag ' + (c.active ? 'g' : '') + '">' + (c.active ? 'فعّال' : 'موقوف') + '</span></div>' +
+        '<div class="ln"><span dir="ltr">' + esc(c.phone) + '</span></div>' +
+        (S.capPw === c.id ? '<div><label for="k-npw">كلمة السر الجديدة</label><input id="k-npw" dir="ltr" autocomplete="off"></div><div class="btns"><button class="red" data-act="capPwSave" data-v="' + esc(c.id) + '">حفظ</button><button data-act="capPw" data-v="">إلغاء</button></div>'
+          : '<div class="btns"><button data-act="capToggle" data-v="' + esc(c.id) + '">' + (c.active ? 'إيقاف' : 'تفعيل') + '</button><button data-act="capPw" data-v="' + esc(c.id) + '">تغيير كلمة السر</button></div>') + '</div>').join('')
+        : '<div class="card"><p>لا يوجد كباتن بعد.</p></div>');
   },
   items() {
     const q = S.q.trim(), list = S.d.products.filter(p => (!S.f || p.sec === S.f) && (!q || (p.name + ' ' + p.l1 + ' ' + p.l2).includes(q)));
@@ -204,6 +252,51 @@ const V = {
   }
 };
 
+const TAGC = { 'جديد': 'r', 'مؤجل': 'n', 'تم التسليم': 'g' };
+function ordCard(o) {
+  const tm = (o.date.split(' ')[1] || o.date), del = o.mode === 'delivery', isNew = (o.status === 'جديد' || o.status === 'مؤجل') && !S.oseen.includes(o.no);
+  let btn = '';
+  const st = o.status === 'مقبول' ? 'قيد الإعداد' : o.status;
+  if (S.rej === o.no) btn = '<div><label for="rj">سبب الرفض (يظهر في السجل)</label><input id="rj" placeholder="مثال: المادة غير متوفرة"></div><div class="btns"><button class="red" data-act="ost" data-v="' + esc(o.no) + '" data-to="مرفوض">تأكيد الرفض</button><button data-act="rej" data-v="">تراجع</button></div>';
+  else if (st === 'جديد' || st === 'مؤجل') btn = '<div class="btns"><button class="red" data-act="ost" data-v="' + esc(o.no) + '" data-to="قيد الإعداد">✓ قبول — قيد الإعداد</button><button data-act="rej" data-v="' + esc(o.no) + '">رفض</button></div>';
+  else if (st === 'قيد الإعداد' && !del) btn = '<div class="btns"><button class="red" data-act="ost" data-v="' + esc(o.no) + '" data-to="جاهز للاستلام">جاهز للاستلام</button><button data-act="rej" data-v="' + esc(o.no) + '">رفض</button></div>';
+  else if (st === 'قيد الإعداد' && del && !o.cid) btn = '<p class="hint">⏳ بانتظار أن يقبله كابتن…</p><div class="btns one"><button data-act="rej" data-v="' + esc(o.no) + '">رفض الطلب</button></div>';
+  else if (st === 'جاهز للاستلام') btn = '<div class="btns one"><button class="red" data-act="ost" data-v="' + esc(o.no) + '" data-to="تم التسليم">تم التسليم للزبون</button></div>';
+  const lastLog = o.log ? o.log.split(' | ').pop() : '';
+  return '<div class="ord' + (isNew ? ' new' : '') + '"><div class="top"><b style="font-size:18px">' + esc(o.no) + '</b><span class="tag ' + (TAGC[o.status] || '') + '">' + esc(o.status) + '</span>' +
+    '<span class="hint" style="margin-inline-start:auto">' + esc(tm) + '</span></div>' +
+    '<div class="ln"><b>' + esc(o.name) + '</b><a href="tel:' + esc(o.phone) + '" dir="ltr">' + esc(o.phone) + '</a></div>' +
+    '<div class="it">' + esc(o.items.split('، ').join('\n')) + '</div>' +
+    '<div class="ln"><span>' + (del ? '🛵 توصيل' + (o.area ? ' — ' + esc(o.area) : '') : '🏪 استلام من المحل') + '</span><b>' + money(o.total) + (o.pay === 'online' ? ' · إلكتروني' : ' · عند الاستلام') + '</b></div>' +
+    (o.loc ? '<a href="' + esc(o.loc) + '" target="_blank" rel="noopener">📍 فتح الموقع على الخريطة</a>' : '') +
+    (o.note ? '<p class="hint">ملاحظة: ' + esc(o.note) + '</p>' : '') +
+    (o.captain ? '<div class="ln"><span>الكابتن: <b>' + esc(o.captain) + '</b></span><span class="hint">' + esc(lastLog) + '</span></div>' : '') +
+    (o.reason ? '<p class="msg">السبب: ' + esc(o.reason) + '</p>' : '') + btn + '</div>';
+}
+function beep() {
+  try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
+  try {
+    const A = window.AudioContext || window.webkitAudioContext; if (!A) return;
+    const c = beep.c || (beep.c = new A()), t = c.currentTime;
+    [0, 0.25].forEach(d => { const o = c.createOscillator(), g = c.createGain(); o.frequency.value = 880; g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.3, t + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.2); o.connect(g); g.connect(c.destination); o.start(t + d); o.stop(t + d + 0.22); });
+  } catch (e) {}
+}
+let oKnown = null;
+function loadOrders(quiet) {
+  return api('admin_orders').then(r => {
+    if (!r.ok) { if (!quiet) { say(r.error || 'تعذر تحميل الطلبات'); render(); } return; }
+    S.orders = r.orders; S.ov = r.v;
+    const news = r.orders.filter(o => o.status === 'جديد' || o.status === 'مؤجل').map(o => o.no);
+    if (oKnown && news.some(n => !oKnown.includes(n))) { beep(); document.title = '🔴 طلب جديد — لوحة الروان'; }
+    oKnown = news;
+    if (S.view === 'main' && S.tab === 'orders' && !document.activeElement.matches('input')) render();
+  });
+}
+setInterval(() => {
+  if (!S.auth || !S.d || document.hidden) return;
+  api('ping').then(r => { if (r.ok && r.v !== S.ov) loadOrders(true); });
+}, 15000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { document.title = 'لوحة الروان'; if (S.auth && S.d) loadOrders(true); } });
 function render() {
   $('app').innerHTML = S.view === 'form' ? V.form() : V[S.view]();
   $('hback').innerHTML = S.view === 'form' ? '<button data-act="back" aria-label="رجوع للصفحة السابقة">→ رجوع</button>' : '';
@@ -221,7 +314,7 @@ function load() {
   api('admin_get').then(r => {
     if (!r.ok) { S.view = S.d && S.auth ? 'main' : 'login'; say(r.error || 'تعذر التحميل'); render(); return; }
     S.d = r; S.ads = (r.ads || []).map(a => ({ text: a.text || '', img: a.img || '' })); S.branches = (r.branches || []).map(b => ({ name: b.name || '', phone: b.phone || '', map: b.map || '' }));
-    S.view = 'main'; render();
+    S.view = 'main'; render(); loadOrders(true);
   });
 }
 const val = id => { const e = $(id); return e ? e.value.trim() : ''; };
@@ -251,7 +344,7 @@ const ACT = {
     api('admin_login', { password }).then(done);
   },
   logout() { S.auth = null; store.set('rw_admin', null); S.d = null; S.view = 'login'; S.setup = false; say(''); render(); },
-  tab(d) { if (S.tab === 'ads') keepAds(); if (S.tab === 'branches') keepBr(); S.tab = d.v; say(''); render(); },
+  tab(d) { if (S.tab === 'ads') keepAds(); if (S.tab === 'branches') keepBr(); if (d.v === 'orders') loadOrders(true); if (d.v === 'caps' && !S.caps) loadCaps(); document.title = 'لوحة الروان'; S.tab = d.v; say(''); render(); },
   add() { S.edit = { id: '', sec: S.f, l1: '', l2: '', name: '', price: '', img: '' }; S.imgNew = ''; say(''); openForm(); },
   edit(d) { const p = S.d.products.find(x => x.id === d.v); if (!p) return; S.edit = Object.assign({}, p); S.imgNew = ''; say(''); openForm(); },
   back() { if (history.state && history.state.form) history.back(); else closeForm(); },
@@ -301,6 +394,32 @@ const ACT = {
     S.busy = true; say(''); render();
     api('admin_branches', { branches: S.branches.filter(b => b.name.trim()) }).then(r => { S.busy = false; say(r.ok ? 'تم رفع الفروع ✓ تظهر في التطبيق الآن.' : (r.error || 'تعذر الحفظ'), r.ok); render(); });
   },
+  osub(d) { S.odone = d.v === '1'; render(); },
+  rej(d) { S.rej = d.v; render(); if (d.v) { const i = $('rj'); if (i) i.focus(); } },
+  ost(d) {
+    const reason = d.to === 'مرفوض' ? val('rj') : '';
+    if (d.to === 'مرفوض' && !reason) { say('اكتب سبب الرفض'); render(); return; }
+    S.oseen = S.oseen.concat([d.v]).slice(-200); store.set('rw_oseen', S.oseen);
+    S.busy = true;
+    api('admin_status', { no: d.v, to: d.to, reason }).then(r => {
+      S.busy = false; S.rej = '';
+      say(r.ok ? 'تم ✓ ' + d.v + ' ← ' + d.to : (r.error || 'تعذر التحديث'), r.ok);
+      loadOrders(true).then(render);
+    });
+  },
+  capNew(d) { S.capNew = d.v === '1'; say(''); render(); if (S.capNew) $('k-name').focus(); },
+  capPw(d) { S.capPw = d.v; say(''); render(); if (d.v) $('k-npw').focus(); },
+  capAdd() {
+    const name = val('k-name'), phone = val('k-phone').replace(/\s/g, ''), password = val('k-pw');
+    if (!name || !/^07\d{9}$/.test(phone) || password.length < 4) { say('اكتب الاسم، ورقم هاتف صحيحاً، وكلمة سر من ٤ رموز على الأقل'); render(); return; }
+    capSave({ name, phone, password }, 'تم إضافة الكابتن ✓ أعطه الرابط ورقمه وكلمة السر.');
+  },
+  capToggle(d) { const c = S.caps.find(x => x.id === d.v); if (c) capSave({ id: c.id, name: c.name, phone: c.phone, active: !c.active }, c.active ? 'تم إيقاف الكابتن وخروجه من التطبيق.' : 'تم تفعيل الكابتن.'); },
+  capPwSave(d) {
+    const c = S.caps.find(x => x.id === d.v), password = val('k-npw');
+    if (!c || password.length < 4) { say('كلمة السر من ٤ رموز على الأقل'); render(); return; }
+    capSave({ id: c.id, name: c.name, phone: c.phone, active: c.active, password }, 'تم تغيير كلمة سر الكابتن ✓');
+  },
   delAsk() { keepForm(); S.delAsk = true; say(''); render(); window.scrollTo(0, document.body.scrollHeight); },
   delNo() { S.delAsk = false; render(); },
   del() {
@@ -324,11 +443,20 @@ const ACT = {
 function openForm() { S.delAsk = false; S.view = 'form'; render(); window.scrollTo(0, 0); try { history.pushState({ form: 1 }, ''); } catch (e) {} }
 function closeForm() { const keep = S.good ? S.msg : ''; S.view = 'main'; S.edit = null; S.imgNew = ''; say(keep, !!keep); render(); }
 window.addEventListener('popstate', () => { if (S.view === 'form') closeForm(); });
+function loadCaps() { api('admin_caps').then(r => { S.caps = r.ok ? r.caps : []; if (!r.ok) say(r.error || 'تعذر التحميل'); render(); }); }
+function capSave(data, okMsg) {
+  S.busy = true; render();
+  api('admin_capsave', data).then(r => {
+    S.busy = false;
+    if (!r.ok) { say(r.error || 'تعذر الحفظ'); render(); return; }
+    S.capNew = false; S.capPw = ''; say(okMsg, true); loadCaps();
+  });
+}
 function fail(t) { say(t); render(); window.scrollTo(0, document.body.scrollHeight); }
 function done(r) {
   S.busy = false;
   if (!r.ok) { if (r.needSetup) S.setup = true; say(r.error || 'تعذر الدخول'); render(); return; }
-  S.auth = { token: r.token, role: r.role }; store.set('rw_admin', S.auth); S.setup = false; say(''); S.tab = 'items'; load();
+  S.auth = { token: r.token, role: r.role }; store.set('rw_admin', S.auth); S.setup = false; say(''); S.tab = 'orders'; beep.c = null; load();
 }
 document.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && ACT[b.dataset.act] && !b.disabled) ACT[b.dataset.act](b.dataset); });
 document.addEventListener('keydown', e => {

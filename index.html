@@ -282,7 +282,7 @@ function gotStatus(r) {
   S.orders = r.orders || []; S.stamps = r.stamps || 0; S.rewards = r.rewards || 0;
   if (r.code && S.user && S.user.code !== r.code) { S.user.code = r.code; store.set('rw_user', S.user); }
 }
-const STATUS_TEXT = { 'مؤجل': 'طلبك مؤجل — يُجهَّز صباحاً عند بدء الدوام', 'جديد': 'أُرسل طلبك إلى المكتبة', 'مقبول': 'تم قبول طلبك', 'مرفوض': 'نعتذر، الطلب غير متوفر حالياً' };
+const STATUS_TEXT = { 'مؤجل': 'طلبك مؤجل — يُجهَّز صباحاً عند بدء الدوام', 'جديد': 'أُرسل طلبك إلى المكتبة', 'قيد الإعداد': 'المكتبة تجهّز طلبك', 'جاهز للاستلام': 'طلبك جاهز — تفضّل لاستلامه من المكتبة', 'قيد التوصيل': 'طلبك في الطريق إليك 🛵', 'تم التسليم': 'تم التسليم ✓ شكراً لك', 'راجع': 'لم يتم التسليم، ورجع الطلب إلى المكتبة', 'مقبول': 'تم قبول طلبك', 'مرفوض': 'نعتذر، الطلب غير متوفر حالياً' };
 
 /* ---------- وضع العرض التجريبي (يعمل قبل ربط الخادم) ---------- */
 const DEMO_CAT = {
@@ -475,7 +475,9 @@ const V = {
     return head('السجل', 'home') + msg() + '<button class="b-white" data-act="orders">تحديث</button>' +
       (S.orders.length ? S.orders.map(o =>
         '<div class="card"><div class="row"><strong class="grow">طلب ' + esc(o.no) + '</strong><span class="tag">' + esc(o.status) + '</span></div>' +
-        '<p style="font-weight:800">' + esc(STATUS_TEXT[o.status] || o.status) + '</p><p class="hint">' + esc(o.items) + '</p>' +
+        '<p style="font-weight:800">' + esc(STATUS_TEXT[o.status] || o.status) + '</p>' +
+        (o.cap ? '<div class="row"><span class="grow">الكابتن: <b>' + esc(o.cap.name) + '</b></span>' + (o.cap.phone ? '<a class="btn b-red" style="width:auto;padding:8px 16px;min-height:40px" href="tel:' + esc(o.cap.phone) + '">اتصال</a>' : '') + '</div>' : '') +
+        '<p class="hint">' + esc(o.items) + '</p>' +
         '<div class="line total"><span>التكلفة الكلية</span><span>' + money(o.total) + '</span></div>' +
         (o.status === 'مقبول' && o.pay === 'online' ? '<p class="msg">حوّل ' + money(o.total) + ' إلى: ' + esc(S.cat.settings.wallet) + ' واكتب رقم الطلب ' + esc(o.no) + ' في الملاحظة.</p>' : '') +
         '</div>').join('') : '<div class="card"><p style="font-weight:800">لا توجد طلبات بعد</p></div>');

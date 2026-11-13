@@ -1,0 +1,17 @@
+{
+  "name": "كابتن الروان",
+  "short_name": "كابتن الروان",
+  "id": "./captain-q8.html",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./captain-q8.html",
+  "scope": "./captain-q8.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#111111",
+  "theme_color": "#111111",
+  "icons": [
+    { "src": "icon2-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon2-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
