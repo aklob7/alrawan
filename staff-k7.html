@@ -44,6 +44,7 @@ input:focus,select:focus,button:focus-visible{outline:3px solid var(--red);outli
 .photo img{max-width:100%;max-height:240px;border-radius:12px}
 .bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid var(--line);padding:12px 16px;z-index:3}
 .bar button{max-width:608px;margin:0 auto;display:block;min-height:58px;font-size:19px}
+.delbtn{border-color:var(--red);color:var(--red);margin-top:8px}
 .row{display:flex;gap:8px;align-items:center}
 .ad{display:flex;flex-direction:column;gap:8px;border:2px solid var(--line);border-radius:14px;padding:10px}
 .ad img{width:100%;max-height:200px;object-fit:cover;border-radius:10px}
@@ -173,7 +174,11 @@ const V = {
       '<div><label>الصورة</label><button class="photo" data-act="pick" aria-label="اختيار صورة">' +
       (S.imgNew ? '<img src="' + S.imgNew + '" alt="">' : img ? imgTag(img, '') : '<span style="font-size:40px">📷</span>') +
       '<span>' + (img ? 'اضغط لتغيير الصورة' : 'اضغط لاختيار صورة من الهاتف') + '</span></button></div>' +
-      msg() + '<button data-act="back">رجوع بدون حفظ</button></div>';
+      msg() + '<button data-act="back">رجوع بدون حفظ</button>' +
+      (isNew ? '' : S.delAsk
+        ? '<div class="card" style="border-color:var(--red)"><p style="font-weight:800">حذف "' + esc(e.name) + '" نهائياً من التطبيق؟</p>' +
+          '<button class="red" data-act="del"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الحذف…' : 'نعم، احذفه') + '</button><button data-act="delNo">لا، تراجع</button></div>'
+        : '<button class="delbtn" data-act="delAsk">🗑 حذف هذا المنتج</button>') + '</div>';
   },
   ads() {
     return '<p class="hint">الإعلانات تظهر في أعلى الصفحة الرئيسية للتطبيق وتتبدل كل ٤ ثوانٍ. أضف صورة، وإن شئت نصاً قصيراً تحتها.</p>' +
@@ -276,6 +281,19 @@ const ACT = {
       S.busy = false; say('تم رفع الإعلانات ✓', true); render();
     }).catch(err => { S.busy = false; say(err.message); render(); });
   },
+  delAsk() { keepForm(); S.delAsk = true; say(''); render(); window.scrollTo(0, document.body.scrollHeight); },
+  delNo() { S.delAsk = false; render(); },
+  del() {
+    const id = S.edit && S.edit.id; if (!id) return;
+    S.busy = true; render();
+    api('admin_del', { id }).then(r => {
+      S.busy = false; S.delAsk = false;
+      if (!r.ok) { say(r.error || 'تعذر الحذف'); render(); return; }
+      S.d.products = S.d.products.filter(p => p.id !== id);
+      if (history.state && history.state.form) history.back(); else closeForm();
+      setTimeout(() => { say('تم الحذف ✓ لم يعد يظهر في التطبيق.', true); render(); }, 50);
+    });
+  },
   staff() {
     const password = val('s-pass');
     if (password.length < 4) { say('كلمة السر من ٤ رموز على الأقل'); render(); return; }
@@ -283,7 +301,7 @@ const ACT = {
     api('admin_staff', { password }).then(r => { S.busy = false; if (r.ok) S.d.hasStaff = true; say(r.ok ? 'تم حفظ كلمة سر الموظف ✓ أعطها له.' : r.error, r.ok); render(); });
   }
 };
-function openForm() { S.view = 'form'; render(); window.scrollTo(0, 0); try { history.pushState({ form: 1 }, ''); } catch (e) {} }
+function openForm() { S.delAsk = false; S.view = 'form'; render(); window.scrollTo(0, 0); try { history.pushState({ form: 1 }, ''); } catch (e) {} }
 function closeForm() { const keep = S.good ? S.msg : ''; S.view = 'main'; S.edit = null; S.imgNew = ''; say(keep, !!keep); render(); }
 window.addEventListener('popstate', () => { if (S.view === 'form') closeForm(); });
 function fail(t) { say(t); render(); window.scrollTo(0, document.body.scrollHeight); }
