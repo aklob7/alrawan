@@ -184,7 +184,7 @@ function drawerHTML() {
     '<button class="b-white" style="width:auto;min-height:40px;padding:8px 14px;font-size:15px" data-act="photo">تغيير الصورة</button></div>' +
     '<button class="b-line ditem" data-act="orders">' + SV(I.history) + '<span>السجل</span></button>' +
     '<button class="b-line ditem" data-act="offers">' + SV(I.offer) + '<span>العروض</span>' + (n ? '<span class="badge">' + n + '</span>' : '') + '</button>' +
-    (u.type === 'student' ? '<button class="b-line ditem" data-act="loyalty">' + SV(I.card) + '<span>بطاقة الوفاء</span></button>' : '') +
+    '<button class="b-line ditem" data-act="loyalty">' + SV(I.card) + '<span>بطاقة الوفاء</span></button>' +
     '<div style="flex:1"></div><div class="row" style="justify-content:center">' + OWL(64) + '</div>' +
     '<button class="b-line ditem" style="justify-content:center;font-size:15px;min-height:44px" data-act="logout">' + SV(I.out) + '<span>تسجيل الخروج</span></button></aside>';
 }
@@ -302,8 +302,8 @@ const V = {
       '<button class="b-white" style="width:auto" data-act="cart">السلة' + (n ? ' (' + n + ')' : '') + '</button></div>' + msg() +
       (ads.length ? '<div class="card adcard"><p id="ad" class="adin" style="font-size:18px;font-weight:800">' + esc(ads[S.ad % ads.length]) + '</p>' +
         (ads.length > 1 ? '<div class="dots" id="dots" aria-hidden="true">' + ads.map((a, i) => '<i' + (i === S.ad % ads.length ? ' class="on"' : '') + '></i>').join('') + '</div>' : '') + '</div>' : '') +
-      (S.user.type === 'student' ? '<button class="mini" data-act="loyalty">' + SV(I.card).replace('<svg ', '<svg width="34" height="34" style="color:#D91219;flex-shrink:0" ') +
-        '<span class="grow" style="display:flex;flex-direction:column;gap:6px"><span>بطاقة الوفاء · ' + have + ' / ' + total + '</span><span class="pips">' + pips + '</span></span></button>' : '') +
+      ('<button class="mini" data-act="loyalty">' + SV(I.card).replace('<svg ', '<svg width="34" height="34" style="color:#D91219;flex-shrink:0" ') +
+        '<span class="grow" style="display:flex;flex-direction:column;gap:6px"><span>بطاقة الوفاء · ' + have + ' / ' + total + '</span><span class="pips">' + pips + '</span></span></button>') +
       '<h2>الأقسام</h2><div class="grid">' +
       S.cat.sections.map(s => '<button class="tile" data-act="sec" data-v="' + esc(s) + '">' + icon(s) + '<span>' + esc(s) + '</span></button>').join('') + '</div>';
   },
@@ -385,9 +385,9 @@ const V = {
     let g = '';
     for (let i = 0; i < total; i++) g += i < have ? '<div class="stamp' + (i === have - 1 ? ' new' : '') + '">الروان</div>' : '<div class="slot">' + (i + 1) + '</div>';
     return head('بطاقة الوفاء', 'home') + msg() + '<div class="card"><div class="row"><img class="logo" src="' + LOGO + '" alt="" width="48" height="48">' +
-      '<div class="grow"><p style="font-weight:800">' + esc(S.user.name) + '</p><p class="hint">' + esc(S.user.stage || '') + ' · بطاقة طالب</p></div><strong class="price">' + have + ' / ' + total + '</strong></div>' +
+      '<div class="grow"><p style="font-weight:800">' + esc(S.user.name) + '</p><p class="hint">' + (S.user.type === 'student' ? 'طالب' + (S.user.stage ? ' · ' + esc(S.user.stage) : '') : 'زبون') + ' · بطاقة الوفاء</p></div><strong class="price">' + have + ' / ' + total + '</strong></div>' +
       '<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px">' + g + '</div>' +
-      '<p style="font-weight:700">كل ملزمة تستلمها = ختم. عند اكتمال البطاقة: ' + esc(S.cat.settings.reward) + '</p>' +
+      '<p style="font-weight:700">كل ملزمة تستلمها = ختم (الملازم فقط). عند اكتمال البطاقة: ' + esc(S.cat.settings.reward) + '</p>' +
       (done ? '<p class="msg">بطاقات مكتملة: ' + done + '</p>' : '') + '</div>';
   }
 };
