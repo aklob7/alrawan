@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0F3D2E">
+<meta name="robots" content="noindex">
+<title>حسابات الروان</title>
+<link rel="manifest" href="hesab.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon2.png">
+<link rel="icon" href="icon2-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--g:#0F3D2E;--g2:#1E7A55;--red:#D91219;--ink:#111;--line:#e3e3e3;--soft:#f5f6f5;--muted:#5b625e}
+*{box-sizing:border-box;margin:0}
+body{font-family:Cairo,system-ui,sans-serif;background:#f1f3f2;color:var(--ink);font-size:16px;line-height:1.5}
+header{background:var(--g);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:3}
+header h1{font-size:19px;flex:1}
+header button{width:auto;min-height:36px;padding:2px 12px;font-size:14px;background:#fff;color:var(--g);border:none}
+main{max-width:860px;margin:0 auto;padding:14px;display:flex;flex-direction:column;gap:12px;padding-bottom:40px}
+h2{font-size:17px}
+button,.btn{font:inherit;font-weight:800;border-radius:12px;min-height:48px;padding:8px 14px;width:100%;cursor:pointer;border:2px solid var(--g);background:#fff;color:var(--g);touch-action:manipulation}
+button:disabled{opacity:.5}
+.prime{background:var(--g);color:#fff}
+label{font-weight:800;display:block;margin-bottom:4px;font-size:14px}
+input{font:inherit;width:100%;min-height:48px;padding:8px 12px;border:2px solid #bbb;border-radius:12px;background:#fff;color:var(--ink)}
+input:focus,button:focus-visible{outline:3px solid var(--g2);outline-offset:2px}
+.card{background:#fff;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.chips button{min-height:42px;font-size:14px;padding:4px}
+.chips .on{background:var(--g);color:#fff}
+.range{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end}
+.range button{width:auto}
+.hero{background:var(--g);color:#fff}
+.hero .big{font-size:34px;font-weight:900;letter-spacing:.5px}
+.hero .hint{color:#cfe3da}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat{background:#fff;border-radius:14px;padding:10px;text-align:center}
+.stat b{display:block;font-size:24px}
+.stat span{font-size:13px;color:var(--muted);font-weight:700}
+.ln{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+.ln:last-child{border-bottom:none}
+.ln.minus b{color:var(--red)}
+.ln.total{font-weight:900;font-size:18px}
+.split{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--line)}
+.split i{display:block;height:100%}
+.legend{display:flex;justify-content:space-between;font-size:14px;font-weight:700}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-inline-end:4px}
+.bars{display:flex;flex-direction:column;gap:6px}
+.bar{display:grid;grid-template-columns:78px 1fr 92px;gap:8px;align-items:center;font-size:13px}
+.bar .t{height:16px;border-radius:4px;background:var(--g2);min-width:2px}
+.bar b{text-align:end}
+.msg{padding:10px 12px;border-radius:12px;font-weight:700;background:#fdecec;color:#8a0a0f}
+.hint{color:var(--muted);font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:start}
+th{font-size:13px;color:var(--muted)}
+td.n,th.n{text-align:end;font-variant-numeric:tabular-nums}
+@media (max-width:520px){.stats{grid-template-columns:repeat(2,1fr)}.chips{grid-template-columns:repeat(2,1fr)}.range{grid-template-columns:1fr 1fr}.range button{grid-column:1/-1;width:100%}}
+</style>
+</head>
+<body>
+<header><h1>حسابات الروان</h1><span id="hbtn"></span></header>
+<main id="app" aria-live="polite"></main>
+<script src="config.js"></script>
+<script>
+'use strict';
+const API = window.RAWAN_API || '';
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const num = n => Number(n || 0).toLocaleString('en-US');
+const money = n => num(n) + ' د.ع';
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+/* التاريخ بتوقيت بغداد مهما كان توقيت الجهاز */
+function bgd(d) {
+  try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Baghdad', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d); }
+  catch (e) { return d.toISOString().slice(0, 10); }
+}
+function periods() {
+  const now = new Date(), today = bgd(now), y = bgd(new Date(now.getTime() - 864e5));
+  const [Y, M] = today.split('-').map(Number);
+  const pad = n => String(n).padStart(2, '0');
+  const lastDay = (yy, mm) => new Date(Date.UTC(yy, mm, 0)).getUTCDate();
+  const pY = M === 1 ? Y - 1 : Y, pM = M === 1 ? 12 : M - 1;
+  return {
+    today: [today, today], yesterday: [y, y],
+    month: [Y + '-' + pad(M) + '-01', today],
+    last: [pY + '-' + pad(pM) + '-01', pY + '-' + pad(pM) + '-' + pad(lastDay(pY, pM))]
+  };
+}
+const S = { auth: store.get('rw_acc', null), per: 'today', from: '', to: '', r: null, msg: '', busy: false };
+
+function api(action, data) {
+  if (!API) return Promise.resolve({ ok: false, error: 'رابط الخادم غير موجود' });
+  return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ action, admin: S.auth && S.auth.token }, data || {})) })
+    .then(r => r.json()).catch(() => ({ ok: false, error: 'تعذر الاتصال. تحقق من الإنترنت.' }))
+    .then(r => { if (r.auth) { S.auth = null; store.set('rw_acc', null); S.r = null; } return r; });
+}
+function msg() { return S.msg ? '<p class="msg" role="alert">' + esc(S.msg) + '</p>' : ''; }
+
+function loginView() {
+  return '<div class="card"><h2>دخول المحاسب</h2><p class="hint">اكتب رمز المحاسب أو كلمة سر صاحب المكتبة.</p>' +
+    '<div><label for="pw">الرمز أو كلمة السر</label><input id="pw" type="password" autocomplete="current-password"></div>' +
+    msg() + '<button class="prime" data-act="login"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الدخول…' : 'دخول') + '</button></div>';
+}
+function periodView() {
+  const P = [['today', 'اليوم'], ['yesterday', 'أمس'], ['month', 'هذا الشهر'], ['last', 'الشهر الماضي']];
+  return '<div class="card"><div class="chips">' + P.map(p => '<button class="' + (S.per === p[0] ? 'on' : '') + '" data-act="per" data-v="' + p[0] + '">' + p[1] + '</button>').join('') + '</div>' +
+    '<div class="range"><div><label for="f">من</label><input id="f" type="date" value="' + esc(S.from) + '"></div><div><label for="t">إلى</label><input id="t" type="date" value="' + esc(S.to) + '"></div>' +
+    '<button class="prime" data-act="custom">عرض</button></div></div>';
+}
+function reportView() {
+  const r = S.r;
+  if (!r) return '<div class="card"><p style="font-weight:800">' + (S.busy ? 'جارِ حساب التقرير…' : '') + '</p></div>';
+  const s = r.sum, same = r.from === r.to;
+  const pctCod = s.total ? Math.round(s.cod / s.total * 100) : 0, pctDel = s.total ? Math.round(s.deliveryT / s.total * 100) : 0;
+  let h = '<div class="card hero"><span class="hint">صافي المبيعات (الطلبات المُسلَّمة) · ' + esc(same ? r.from : r.from + ' ← ' + r.to) + '</span>' +
+    '<span class="big">' + money(s.total) + '</span><span class="hint">' + num(s.delivered) + ' طلب واصل · ' + num(s.malazim) + ' ملزمة' + (S.busy ? ' · جارِ التحديث…' : '') + '</span></div>';
+  h += '<div class="stats"><div class="stat"><b>' + num(s.delivered) + '</b><span>واصلة</span></div><div class="stat"><b style="color:var(--red)">' + num(s.returned) + '</b><span>راجعة</span></div>' +
+    '<div class="stat"><b>' + num(s.rejected) + '</b><span>مرفوضة</span></div><div class="stat"><b>' + num(s.active) + '</b><span>ما زالت جارية</span></div></div>';
+  h += '<div class="card"><h2>تفصيل المبيعات</h2>' +
+    '<div class="ln"><span>سعر المواد</span><b>' + money(s.products) + '</b></div>' +
+    '<div class="ln"><span>رسوم الخدمة</span><b>' + money(s.fees) + '</b></div>' +
+    '<div class="ln"><span>أجور التوصيل</span><b>' + money(s.delivery) + '</b></div>' +
+    '<div class="ln minus"><span>خصومات الأكواد</span><b>− ' + money(s.discount) + '</b></div>' +
+    '<div class="ln minus"><span>هدايا بطاقة الوفاء</span><b>− ' + money(s.rewards) + '</b></div>' +
+    '<div class="ln total"><span>الصافي</span><span>' + money(s.total) + '</span></div>' +
+    '<p class="hint">أجور التوصيل تُدفع للكابتن حسب اتفاقكم؛ الصافي يشملها كما دفعها الزبون.</p></div>';
+  h += '<div class="card"><h2>طريقة الدفع</h2><div class="split" role="img" aria-label="عند الاستلام ' + pctCod + '٪"><i style="width:' + pctCod + '%;background:var(--g)"></i><i style="width:' + (100 - pctCod) + '%;background:#9cc9b4"></i></div>' +
+    '<div class="legend"><span><i class="dot" style="background:var(--g)"></i>عند الاستلام ' + money(s.cod) + '</span><span><i class="dot" style="background:#9cc9b4"></i>إلكتروني ' + money(s.online) + '</span></div>' +
+    '<h2 style="margin-top:6px">الاستلام</h2><div class="split" role="img" aria-label="توصيل ' + pctDel + '٪"><i style="width:' + pctDel + '%;background:var(--g)"></i><i style="width:' + (100 - pctDel) + '%;background:#9cc9b4"></i></div>' +
+    '<div class="legend"><span><i class="dot" style="background:var(--g)"></i>توصيل ' + num(s.deliveryN) + ' · ' + money(s.deliveryT) + '</span><span><i class="dot" style="background:#9cc9b4"></i>من المحل ' + num(s.pickupN) + ' · ' + money(s.pickup) + '</span></div></div>';
+  h += '<div class="card"><h2>الكباتن</h2>' + (r.caps.length ?
+    '<table><thead><tr><th>الكابتن</th><th class="n">واصل</th><th class="n">راجع</th><th class="n">كاش معه</th></tr></thead><tbody>' +
+    r.caps.map(c => '<tr><td>' + esc(c.name) + '</td><td class="n">' + num(c.delivered) + '</td><td class="n">' + num(c.returned) + '</td><td class="n"><b>' + money(c.cash) + '</b></td></tr>').join('') + '</tbody></table>' +
+    '<p class="hint">"كاش معه" = مجموع طلبات الدفع عند الاستلام التي سلّمها في هذه الفترة.</p>' : '<p class="hint">لا توجد طلبات توصيل في هذه الفترة.</p>') + '</div>';
+  if (!same && r.days.length) {
+    const mx = Math.max(...r.days.map(d => d.total), 1);
+    h += '<div class="card"><h2>المبيعات حسب اليوم</h2><div class="bars">' + r.days.map(d => '<div class="bar"><span>' + esc(d.day.slice(5)) + '</span><span class="t" style="width:' + Math.max(1, Math.round(d.total / mx * 100)) + '%"></span><b>' + num(d.total) + '</b></div>').join('') + '</div></div>';
+  }
+  if (r.top.length) h += '<div class="card"><h2>الأكثر مبيعاً (بالكمية)</h2>' + r.top.map((t, i) => '<div class="ln"><span>' + (i + 1) + '. ' + esc(t.name) + '</span><b>' + num(t.qty) + '</b></div>').join('') + '</div>';
+  const ret = r.rows.filter(x => x.status === 'راجع' || x.status === 'مرفوض');
+  if (ret.length) h += '<div class="card"><h2>الراجعة والمرفوضة</h2>' + ret.map(x => '<div class="ln"><span>' + esc(x.no) + ' · ' + esc(x.status) + (x.captain ? ' · ' + esc(x.captain) : '') + '<br><span class="hint">' + esc(x.reason || '—') + '</span></span><b>' + money(x.total) + '</b></div>').join('') + '</div>';
+  h += '<button class="prime" data-act="csv"' + (r.rows.length ? '' : ' disabled') + '>⬇ تنزيل كل طلبات الفترة (Excel)</button>';
+  return h;
+}
+function render() {
+  $('app').innerHTML = !S.auth ? loginView() : periodView() + msg() + reportView();
+  $('hbtn').innerHTML = S.auth ? (S.auth.name ? '<span style="font-size:14px;font-weight:700">' + esc(S.auth.name) + '</span> ' : '') + '<button data-act="logout">خروج</button>' : '';
+}
+function load() {
+  S.busy = true; S.msg = ''; render();
+  api('acc_report', { from: S.from, to: S.to }).then(r => {
+    S.busy = false;
+    if (!r.ok) { S.msg = r.error || 'تعذر حساب التقرير'; render(); return; }
+    S.r = r; render();
+  });
+}
+function setPer(k) { const p = periods()[k]; S.per = k; S.from = p[0]; S.to = p[1]; load(); }
+function csv() {
+  const H = [['رقم الطلب', 'no'], ['التاريخ', 'date'], ['الزبون', 'name'], ['الهاتف', 'phone'], ['المواد', 'items'], ['سعر المواد', 'products'], ['رسوم الخدمة', 'fee'], ['التوصيل', 'delivery'],
+    ['الخصم', 'discount'], ['هدية الوفاء', 'reward'], ['الكلي', 'total'], ['الاستلام', 'mode'], ['المنطقة', 'area'], ['الدفع', 'pay'], ['الحالة', 'status'], ['الكابتن', 'captain'], ['السبب', 'reason']];
+  const q = v => { const s = String(v == null ? '' : v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const phone = v => '="' + String(v).replace(/"/g, '') + '"';
+  const lines = [H.map(h => h[0]).join(',')].concat(S.r.rows.map(x => H.map(h => h[1] === 'phone' ? phone(x.phone) : q(x[h[1]])).join(',')));
+  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'rawan-accounts-' + S.r.from + '_' + S.r.to + '.csv';
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+const ACT = {
+  login() {
+    const password = $('pw').value;
+    if (!password) { S.msg = 'اكتب الرمز'; render(); return; }
+    S.busy = true; S.msg = ''; render();
+    api('admin_login', { password, app: 'acct' }).then(r => {
+      S.busy = false;
+      if (!r.ok) { S.msg = r.error || 'تعذر الدخول'; render(); return; }
+      S.auth = { token: r.token, role: r.role, name: r.name || '' }; store.set('rw_acc', S.auth); setPer('today');
+    });
+  },
+  logout() { S.auth = null; store.set('rw_acc', null); S.r = null; S.msg = ''; render(); },
+  per(d) { setPer(d.v); },
+  custom() {
+    const f = $('f').value, t = $('t').value;
+    if (!f || !t || f > t) { S.msg = 'اختر تاريخ البداية ثم النهاية'; render(); return; }
+    S.per = ''; S.from = f; S.to = t; load();
+  },
+  csv() { if (S.r) csv(); }
+};
+document.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && ACT[b.dataset.act] && !b.disabled) ACT[b.dataset.act](b.dataset); });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'pw') ACT.login(); });
+render();
+if (S.auth) setPer('today');
+</script>
+</body>
+</html>

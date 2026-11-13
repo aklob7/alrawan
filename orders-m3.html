@@ -122,8 +122,8 @@ function card(o) {
     (o.reason ? '<p class="msg">السبب: ' + esc(o.reason) + '</p>' : '') + b + '</div>';
 }
 function loginView() {
-  return '<div class="card"><h2>دخول المكتبة</h2><p class="hint">نفس كلمة سر لوحة التحكم (لك أو للموظف).</p>' +
-    '<div><label for="pw">كلمة السر</label><input id="pw" type="password" autocomplete="current-password"></div>' +
+  return '<div class="card"><h2>دخول المكتبة</h2><p class="hint">اكتب رمزك (الموظف) أو كلمة سر صاحب المكتبة.</p>' +
+    '<div><label for="pw">الرمز أو كلمة السر</label><input id="pw" type="password" autocomplete="current-password"></div>' +
     msg() + '<button class="red" data-act="login"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الدخول…' : 'دخول') + '</button></div>';
 }
 function mainView() {
@@ -143,7 +143,7 @@ function mainView() {
 function render() {
   const f = document.activeElement && document.activeElement.id;
   $('app').innerHTML = S.auth ? mainView() : loginView();
-  $('hbtn').innerHTML = S.auth ? '<button data-act="logout">خروج</button>' : '';
+  $('hbtn').innerHTML = S.auth ? (S.auth.name ? '<span style="font-size:14px;font-weight:700">' + esc(S.auth.name) + '</span> ' : '') + '<button data-act="logout">خروج</button>' : '';
   if (f && $(f)) $(f).focus();
 }
 
@@ -173,10 +173,10 @@ const ACT = {
     const password = $('pw').value;
     if (!password) { say('اكتب كلمة السر'); render(); return; }
     S.busy = true; say(''); render(); enableSound();
-    api('admin_login', { password }).then(r => {
+    api('admin_login', { password, app: 'orders' }).then(r => {
       S.busy = false;
       if (!r.ok) { say(r.error || 'تعذر الدخول'); render(); return; }
-      S.auth = { token: r.token, role: r.role }; store.set('rw_ord', S.auth); say(''); render(); load();
+      S.auth = { token: r.token, role: r.role, name: r.name || '' }; store.set('rw_ord', S.auth); say(''); render(); load();
     });
   },
   logout() { S.auth = null; store.set('rw_ord', null); S.orders = null; known = null; say(''); render(); },

@@ -147,15 +147,15 @@ const V = {
       msg() + '<button class="red" data-act="create"' + (S.busy ? ' disabled' : '') + '>حفظ والدخول</button>' +
       '<button data-act="setup" data-v="0">رجوع</button></div>';
     return '<div class="card"><h2>دخول</h2>' +
-      '<div><label for="a-pass">كلمة السر</label><input id="a-pass" type="password" autocomplete="current-password"></div>' +
+      '<div><label for="a-pass">رمز الموظف أو كلمة سر صاحب المكتبة</label><input id="a-pass" type="password" autocomplete="current-password"></div>' +
       msg() + '<button class="red" data-act="login"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الدخول…' : 'دخول') + '</button>' +
       '<button data-act="setup" data-v="1">صاحب المكتبة: أول مرة أو نسيت كلمة السر</button></div>';
   },
   loading() { return '<div class="card"><p style="font-weight:800">جارِ التحميل…</p></div>'; },
   main() {
     const own = S.d.role === 'owner';
-    $('ttl').textContent = own ? 'لوحة الروان · صاحب المكتبة' : 'لوحة الروان · الموظف';
-    const list = own ? [['items', 'المنتجات'], ['ads', 'الإعلانات'], ['branches', 'الفروع'], ['caps', 'الكباتن'], ['staff', 'الموظف'], ['apps', 'التطبيقات']] : [['items', 'المنتجات'], ['apps', 'التطبيقات']];
+    $('ttl').textContent = 'لوحة الروان · ' + (own ? 'صاحب المكتبة' : (S.auth && S.auth.name) || 'الموظف');
+    const list = own ? [['items', 'المنتجات'], ['ads', 'الإعلانات'], ['branches', 'الفروع'], ['caps', 'الكباتن'], ['staff', 'الموظفون'], ['apps', 'التطبيقات']] : [['items', 'المنتجات'], ['apps', 'التطبيقات']];
     const nNew = (S.orders || []).filter(o => o.status === 'جديد' || o.status === 'مؤجل').length;
     const tabs = '<div class="tabs' + (own ? '' : ' two') + '">' + list.map(t =>
       '<button class="' + (S.tab === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '">' + t[1] + (t[0] === 'orders' && nNew ? ' (' + nNew + ')' : '') + '</button>').join('') + '</div>';
@@ -177,7 +177,7 @@ const V = {
     const u = f => new URL(f, location.href).href;
     const row = (t, d, f) => '<div class="card"><h2>' + t + '</h2><p class="hint">' + d + '</p><input readonly dir="ltr" value="' + esc(u(f)) + '" onclick="this.select()" aria-label="' + t + '"><a class="btn red" style="display:flex;align-items:center;justify-content:center;text-decoration:none;border-radius:14px;min-height:52px;font-weight:800" href="' + esc(u(f)) + '" target="_blank" rel="noopener">فتح</a></div>';
     return row('طلبات الروان', 'تطبيق الطلبات للمكتبة: افتحه على جهاز المكتبة واتركه مفتوحاً، فيصدر صوت مع كل طلب جديد. يدخل بنفس كلمة سر اللوحة.', 'orders-m3.html') +
-      (S.d.role === 'owner' ? row('كابتن الروان', 'تطبيق المندوبين. أضف الكباتن من تبويب "الكباتن".', 'captain-q8.html') : '') +
+      (S.d.role === 'owner' ? row('كابتن الروان', 'تطبيق المندوبين. أضف الكباتن من تبويب "الكباتن".', 'captain-q8.html') + row('حسابات الروان', 'تطبيق المحاسب: المبيعات والواصل والراجع وكاش الكباتن. يدخل المحاسب برمزه، وتدخل أنت بكلمة سرك.', 'hesab-p5.html') : '') +
       row('تطبيق الزبائن', 'الرابط الذي تنشره للزبائن.', 'index.html');
   },
   caps() {
@@ -252,10 +252,21 @@ const V = {
         '<button class="small" data-act="delBr" data-v="' + i + '">حذف هذا الفرع</button></div>').join('') : '<div class="card"><p>لا توجد فروع بعد.</p></div>');
   },
   staff() {
-    return '<div class="card"><h2>كلمة سر الموظف</h2><p class="hint">الموظف يستطيع فقط إضافة المنتجات وتعديل الاسم والسعر والصورة. ' +
-      (S.d.hasStaff ? 'توجد كلمة سر حالياً؛ كتابة جديدة تلغي القديمة وتخرج الموظف.' : 'لم تُضبط بعد.') + '</p>' +
-      '<div><label for="s-pass">كلمة سر الموظف الجديدة</label><input id="s-pass" type="text" autocomplete="off" dir="ltr"></div>' +
-      '<button class="red" data-act="staff"' + (S.busy ? ' disabled' : '') + '>حفظ كلمة سر الموظف</button></div>';
+    if (!S.staffs) return '<div class="card"><p style="font-weight:800">جارِ التحميل…</p></div>';
+    const T = { 'موظف': 'موظف: المنتجات والطلبات', 'محاسب': 'محاسب: حسابات الروان فقط' };
+    return '<p class="hint">لكل موظف اسم ورمز خاص. يكتب الموظف رمزه في شاشة الدخول فتفتح له اللوحة وتطبيق الطلبات، ويُسجَّل اسمه على كل طلب يقبله أو يرفضه. المحاسب يدخل برمزه إلى تطبيق حسابات الروان فقط.</p>' +
+      (S.stNew ? '<div class="card"><h2>موظف جديد</h2>' +
+        '<div><label for="w-name">الاسم</label><input id="w-name"></div>' +
+        '<div><label for="w-type">العمل</label><select id="w-type"><option value="موظف">موظف (المنتجات والطلبات)</option><option value="محاسب">محاسب (الحسابات فقط)</option></select></div>' +
+        '<div><label for="w-code">الرمز (٤ أرقام أو أكثر)</label><input id="w-code" inputmode="numeric" dir="ltr" autocomplete="off"></div>' +
+        '<button class="red" data-act="stAdd"' + (S.busy ? ' disabled' : '') + '>حفظ الموظف</button><button data-act="stNew" data-v="0">إلغاء</button></div>'
+        : '<button class="red" data-act="stNew" data-v="1">+ إضافة موظف</button>') +
+      (S.staffs.length ? S.staffs.map(w => '<div class="ord"><div class="top"><b style="flex:1">' + esc(w.name) + '</b><span class="tag ' + (w.active ? 'g' : '') + '">' + (w.active ? 'فعّال' : 'موقوف') + '</span></div>' +
+        '<p class="hint">' + T[w.type] + '</p>' +
+        (S.stCode === w.id ? '<div><label for="w-ncode">الرمز الجديد</label><input id="w-ncode" inputmode="numeric" dir="ltr" autocomplete="off"></div><div class="btns"><button class="red" data-act="stCodeSave" data-v="' + esc(w.id) + '">حفظ</button><button data-act="stCode" data-v="">إلغاء</button></div>'
+          : '<div class="btns"><button data-act="stToggle" data-v="' + esc(w.id) + '">' + (w.active ? 'إيقاف' : 'تفعيل') + '</button><button data-act="stCode" data-v="' + esc(w.id) + '">تغيير الرمز</button></div>') + '</div>').join('')
+        : '<div class="card"><p>لا يوجد موظفون بعد.</p></div>') +
+      (S.stLegacy ? '<div class="card"><p style="font-weight:800">كلمة سر الموظف القديمة ما زالت تعمل</p><p class="hint">بعد إضافة الموظفين بأسمائهم، ألغِ كلمة السر المشتركة القديمة حتى لا يدخل أحد بدون اسم.</p><button data-act="stOld">إلغاء كلمة السر القديمة</button></div>' : '');
   }
 };
 
@@ -351,7 +362,7 @@ const ACT = {
     api('admin_login', { password }).then(done);
   },
   logout() { S.auth = null; store.set('rw_admin', null); S.d = null; S.view = 'login'; S.setup = false; say(''); render(); },
-  tab(d) { if (S.tab === 'ads') keepAds(); if (S.tab === 'branches') keepBr(); if (d.v === 'orders') loadOrders(true); if (d.v === 'caps' && !S.caps) loadCaps(); document.title = 'لوحة الروان'; S.tab = d.v; say(''); render(); },
+  tab(d) { if (S.tab === 'ads') keepAds(); if (S.tab === 'branches') keepBr(); if (d.v === 'orders') loadOrders(true); if (d.v === 'caps' && !S.caps) loadCaps(); if (d.v === 'staff' && !S.staffs) loadStaffs(); document.title = 'لوحة الروان'; S.tab = d.v; say(''); render(); },
   add() { S.edit = { id: '', sec: S.f, l1: '', l2: '', name: '', price: '', img: '' }; S.imgNew = ''; say(''); openForm(); },
   edit(d) { const p = S.d.products.find(x => x.id === d.v); if (!p) return; S.edit = Object.assign({}, p); S.imgNew = ''; say(''); openForm(); },
   back() { if (history.state && history.state.form) history.back(); else closeForm(); },
@@ -440,6 +451,20 @@ const ACT = {
       setTimeout(() => { say('تم الحذف ✓ لم يعد يظهر في التطبيق.', true); render(); }, 50);
     });
   },
+  stNew(d) { S.stNew = d.v === '1'; say(''); render(); if (S.stNew) $('w-name').focus(); },
+  stCode(d) { S.stCode = d.v; say(''); render(); if (d.v) $('w-ncode').focus(); },
+  stAdd() {
+    const name = val('w-name'), code = val('w-code'), type = $('w-type').value;
+    if (!name || code.length < 4) { say('اكتب الاسم ورمزاً من ٤ أرقام أو أكثر'); render(); return; }
+    stSave({ name, code, type }, 'تم إضافة ' + name + ' ✓ أعطه رمزه.');
+  },
+  stToggle(d) { const w = S.staffs.find(x => x.id === d.v); if (w) stSave({ id: w.id, name: w.name, type: w.type, active: !w.active }, w.active ? 'تم إيقاف ' + w.name + ' وخروجه.' : 'تم تفعيل ' + w.name + '.'); },
+  stCodeSave(d) {
+    const w = S.staffs.find(x => x.id === d.v), code = val('w-ncode');
+    if (!w || code.length < 4) { say('الرمز من ٤ أرقام أو أكثر'); render(); return; }
+    stSave({ id: w.id, name: w.name, type: w.type, active: w.active, code }, 'تم تغيير رمز ' + w.name + ' ✓');
+  },
+  stOld() { S.busy = true; render(); api('admin_staffold').then(r => { S.busy = false; if (r.ok) S.stLegacy = false; say(r.ok ? 'تم إلغاء كلمة السر القديمة ✓' : (r.error || 'تعذر'), r.ok); render(); }); },
   staff() {
     const password = val('s-pass');
     if (password.length < 4) { say('كلمة السر من ٤ رموز على الأقل'); render(); return; }
@@ -450,6 +475,15 @@ const ACT = {
 function openForm() { S.delAsk = false; S.view = 'form'; render(); window.scrollTo(0, 0); try { history.pushState({ form: 1 }, ''); } catch (e) {} }
 function closeForm() { const keep = S.good ? S.msg : ''; S.view = 'main'; S.edit = null; S.imgNew = ''; say(keep, !!keep); render(); }
 window.addEventListener('popstate', () => { if (S.view === 'form') closeForm(); });
+function loadStaffs() { api('admin_staffs').then(r => { S.staffs = r.ok ? r.staffs : []; S.stLegacy = !!r.legacy; if (!r.ok) say(r.error || 'تعذر التحميل'); render(); }); }
+function stSave(data, okMsg) {
+  S.busy = true; render();
+  api('admin_staffsave', data).then(r => {
+    S.busy = false;
+    if (!r.ok) { say(r.error || 'تعذر الحفظ'); render(); return; }
+    S.stNew = false; S.stCode = ''; say(okMsg, true); loadStaffs();
+  });
+}
 function loadCaps() { api('admin_caps').then(r => { S.caps = r.ok ? r.caps : []; if (!r.ok) say(r.error || 'تعذر التحميل'); render(); }); }
 function capSave(data, okMsg) {
   S.busy = true; render();
@@ -463,7 +497,7 @@ function fail(t) { say(t); render(); window.scrollTo(0, document.body.scrollHeig
 function done(r) {
   S.busy = false;
   if (!r.ok) { if (r.needSetup) S.setup = true; say(r.error || 'تعذر الدخول'); render(); return; }
-  S.auth = { token: r.token, role: r.role }; store.set('rw_admin', S.auth); S.setup = false; say(''); S.tab = 'items'; load();
+  S.auth = { token: r.token, role: r.role, name: r.name || '' }; store.set('rw_admin', S.auth); S.setup = false; say(''); S.tab = 'items'; load();
 }
 document.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && ACT[b.dataset.act] && !b.disabled) ACT[b.dataset.act](b.dataset); });
 document.addEventListener('keydown', e => {

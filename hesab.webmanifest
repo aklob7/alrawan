@@ -1,0 +1,16 @@
+{
+  "name": "حسابات الروان",
+  "short_name": "حسابات الروان",
+  "id": "./hesab-p5.html",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./hesab-p5.html",
+  "scope": "./hesab-p5.html",
+  "display": "standalone",
+  "background_color": "#0F3D2E",
+  "theme_color": "#0F3D2E",
+  "icons": [
+    { "src": "icon2-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon2-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
