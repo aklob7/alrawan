@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#D91219">
+<meta name="robots" content="noindex">
+<title>لوحة الروان</title>
+<link rel="manifest" href="panel.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--red:#D91219;--ink:#111;--line:#e3e3e3;--soft:#f6f6f6;--ok:#127a3a}
+*{box-sizing:border-box;margin:0}
+body{font-family:Cairo,system-ui,sans-serif;background:#fff;color:var(--ink);font-size:17px;line-height:1.5}
+header{background:var(--red);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:3}
+header h1{font-size:20px;flex:1}
+header button{width:auto;min-height:38px;padding:4px 12px;font-size:14px;background:#fff;color:var(--red);border:none}
+main{max-width:640px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:14px;padding-bottom:110px}
+h2{font-size:19px}
+button{font:inherit;font-weight:800;border-radius:14px;min-height:52px;padding:10px 16px;width:100%;cursor:pointer;border:2px solid var(--ink);background:#fff;color:var(--ink)}
+button:disabled{opacity:.5}
+.red{background:var(--red);border-color:var(--red);color:#fff}
+.black{background:var(--ink);color:#fff}
+.small{width:auto;min-height:40px;padding:4px 12px;font-size:15px}
+label{font-weight:800;display:block;margin-bottom:4px}
+input,select{font:inherit;width:100%;min-height:52px;padding:10px 12px;border:2px solid #bbb;border-radius:12px;background:#fff;color:var(--ink)}
+input:focus,select:focus,button:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.card{border:2px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tabs button{min-height:46px;font-size:15px}
+.tabs .on{background:var(--ink);color:#fff}
+.msg{padding:10px 12px;border-radius:12px;font-weight:700;background:#fdecec;color:#8a0a0f}
+.msg.good{background:#e6f5ec;color:var(--ok)}
+.hint{color:#555;font-size:14px}
+.item{display:flex;align-items:center;gap:12px;padding:10px;border:2px solid var(--line);border-radius:14px;background:#fff;text-align:right;min-height:72px}
+.item .t{flex:1;display:flex;flex-direction:column}
+.item b{font-size:16px}
+.item span{font-size:14px;color:#555}
+.thumb{width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--soft);flex-shrink:0;display:block}
+.photo{border:2px dashed #999;border-radius:16px;min-height:170px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:var(--soft);font-weight:800;color:#444}
+.photo img{max-width:100%;max-height:240px;border-radius:12px}
+.bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid var(--line);padding:12px 16px;z-index:3}
+.bar button{max-width:608px;margin:0 auto;display:block;min-height:58px;font-size:19px}
+.row{display:flex;gap:8px;align-items:center}
+.ad{display:flex;flex-direction:column;gap:8px;border:2px solid var(--line);border-radius:14px;padding:10px}
+.ad img{width:100%;max-height:200px;object-fit:cover;border-radius:10px}
+</style>
+</head>
+<body>
+<header><span id="hback"></span><h1 id="ttl">لوحة الروان</h1><span id="hbtn"></span></header>
+<main id="app" aria-live="polite"></main>
+<div class="bar" id="bar" hidden></div>
+<input type="file" id="pick" accept="image/*" hidden>
+<script src="config.js"></script>
+<script>
+'use strict';
+const API = window.RAWAN_API || '';
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const money = n => Number(n || 0).toLocaleString('en-US') + ' د.ع';
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+const S = { auth: store.get('rw_admin', null), view: 'login', d: null, tab: 'items', q: '', f: '', edit: null, img: '', imgNew: '', msg: '', good: false, busy: false, setup: false, ads: [] };
+
+function api(action, data) {
+  if (!API) return Promise.resolve({ ok: false, error: 'رابط الخادم غير موجود في config.js' });
+  return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ action, admin: S.auth && S.auth.token }, data || {})) })
+    .then(r => r.json()).catch(() => ({ ok: false, error: 'تعذر الاتصال. تحقق من الإنترنت.' }))
+    .then(r => { if (r.auth) { S.auth = null; store.set('rw_admin', null); S.view = 'login'; } return r; });
+}
+
+/* الصور المرفوعة تُجلب من الخادم مرة واحدة وتُحفظ على الجهاز */
+const IMGS = {}, WAIT = {};
+const isUp = v => /^img_[\w-]+$/.test(v || ''), isFile = v => /^[\w.-]+\.(jpg|jpeg|png|webp)$/i.test(v || '');
+function imgTag(v, cls) {
+  if (isFile(v)) return '<img class="' + cls + '" src="' + esc(v) + '" alt="" loading="lazy">';
+  if (!isUp(v)) return '<span class="' + cls + '"></span>';
+  if (!IMGS[v]) { const c = store.get('rwi_' + v, ''); if (c) IMGS[v] = c; }
+  return '<img class="' + cls + '" data-img="' + v + '" alt=""' + (IMGS[v] ? ' src="' + IMGS[v] + '"' : '') + '>';
+}
+function hydrate() {
+  document.querySelectorAll('img[data-img]:not([src])').forEach(el => {
+    const id = el.dataset.img; if (WAIT[id]) return;
+    WAIT[id] = api('img', { id }).then(r => {
+      if (!r.ok) return; IMGS[id] = r.data; store.set('rwi_' + id, r.data);
+      document.querySelectorAll('img[data-img="' + id + '"]').forEach(x => { x.src = r.data; });
+    });
+  });
+}
+/* تصغير الصورة على الجهاز قبل رفعها: أسرع وأخف على الخادم */
+function shrink(file) {
+  return new Promise((ok, no) => {
+    const im = new Image(), url = URL.createObjectURL(file);
+    im.onload = () => {
+      URL.revokeObjectURL(url);
+      let side = 1000, q = 0.8, out = '';
+      for (let i = 0; i < 8; i++) {
+        const k = Math.min(1, side / Math.max(im.width, im.height)), c = document.createElement('canvas');
+        c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+        const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height);
+        out = c.toDataURL('image/jpeg', q);
+        if (out.length < 380000) return ok(out);
+        side = Math.round(side * 0.8); q = Math.max(0.55, q - 0.05);
+      }
+      no(new Error('big'));
+    };
+    im.onerror = () => { URL.revokeObjectURL(url); no(new Error('bad')); };
+    im.src = url;
+  });
+}
+
+function say(t, good) { S.msg = t; S.good = !!good; }
+function msg() { return S.msg ? '<p class="msg' + (S.good ? ' good' : '') + '" role="alert">' + esc(S.msg) + '</p>' : ''; }
+const stagedSec = s => S.d && S.d.sections.some(x => x.name === s && x.staged);
+
+const V = {
+  login() {
+    $('ttl').textContent = 'لوحة الروان';
+    if (S.setup) return '<div class="card"><h2>ضبط كلمة سر صاحب المكتبة</h2>' +
+      '<p class="hint">١) اضغط "أرسل الرمز" فيصلك رمز من ٦ أرقام على بوت تيليغرام المكتبة.<br>٢) اكتب الرمز وكلمة سر جديدة (٦ رموز أو أكثر).</p>' +
+      '<button class="black" data-act="sendCode"' + (S.busy ? ' disabled' : '') + '>أرسل الرمز إلى تيليغرام</button>' +
+      '<div><label for="a-code">الرمز</label><input id="a-code" inputmode="numeric" dir="ltr" autocomplete="one-time-code"></div>' +
+      '<div><label for="a-new">كلمة السر الجديدة</label><input id="a-new" type="password" autocomplete="new-password"></div>' +
+      msg() + '<button class="red" data-act="create"' + (S.busy ? ' disabled' : '') + '>حفظ والدخول</button>' +
+      '<button data-act="setup" data-v="0">رجوع</button></div>';
+    return '<div class="card"><h2>دخول</h2>' +
+      '<div><label for="a-pass">كلمة السر</label><input id="a-pass" type="password" autocomplete="current-password"></div>' +
+      msg() + '<button class="red" data-act="login"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الدخول…' : 'دخول') + '</button>' +
+      '<button data-act="setup" data-v="1">صاحب المكتبة: أول مرة أو نسيت كلمة السر</button></div>';
+  },
+  loading() { return '<div class="card"><p style="font-weight:800">جارِ التحميل…</p></div>'; },
+  main() {
+    const own = S.d.role === 'owner';
+    $('ttl').textContent = own ? 'لوحة الروان · صاحب المكتبة' : 'لوحة الروان · الموظف';
+    const tabs = own ? '<div class="tabs">' + [['items', 'المنتجات'], ['ads', 'الإعلانات'], ['staff', 'الموظف']].map(t =>
+      '<button class="' + (S.tab === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' : '';
+    return tabs + msg() + (S.tab === 'ads' && own ? V.ads() : S.tab === 'staff' && own ? V.staff() : V.items());
+  },
+  items() {
+    const q = S.q.trim(), list = S.d.products.filter(p => (!S.f || p.sec === S.f) && (!q || (p.name + ' ' + p.l1 + ' ' + p.l2).includes(q)));
+    return '<button class="red" data-act="add">+ إضافة منتج جديد</button>' +
+      '<div class="row"><select id="f-sec" data-change="filter" aria-label="القسم" style="flex:1"><option value="">كل الأقسام</option>' +
+      S.d.sections.map(s => '<option' + (S.f === s.name ? ' selected' : '') + '>' + esc(s.name) + '</option>').join('') + '</select></div>' +
+      '<input id="f-q" type="search" placeholder="ابحث باسم المنتج" value="' + esc(S.q) + '" aria-label="بحث">' +
+      '<p class="hint">' + list.length + ' منتج. اضغط على أي منتج لتعديل اسمه أو سعره أو صورته.</p>' +
+      '<div id="list" style="display:flex;flex-direction:column;gap:8px">' + list.slice(0, 120).map(p =>
+        '<button class="item" data-act="edit" data-v="' + esc(p.id) + '">' + imgTag(p.img, 'thumb') +
+        '<span class="t"><b>' + esc(p.name) + '</b><span>' + esc([p.sec, p.l1, p.l2].filter(Boolean).join(' · ')) + '</span></span>' +
+        '<b style="color:var(--red)">' + money(p.price) + '</b></button>').join('') + '</div>' +
+      (list.length > 120 ? '<p class="hint">يظهر أول ١٢٠ منتجاً. استعمل البحث للوصول إلى البقية.</p>' : '');
+  },
+  form() {
+    const e = S.edit, isNew = !e.id;
+    $('ttl').textContent = isNew ? 'منتج جديد' : 'تعديل منتج';
+    const img = S.imgNew || e.img;
+    let place = '';
+    if (isNew) {
+      place = '<div><label for="e-sec">القسم</label><select id="e-sec" data-change="esec"><option value="">اختر القسم</option>' +
+        S.d.sections.map(s => '<option' + (e.sec === s.name ? ' selected' : '') + '>' + esc(s.name) + '</option>').join('') + '</select></div>';
+      if (e.sec && stagedSec(e.sec)) place +=
+        '<div><label for="e-l1">المرحلة</label><select id="e-l1"><option value="">اختر المرحلة</option>' + S.d.stages.map(s => '<option' + (e.l1 === s ? ' selected' : '') + '>' + esc(s) + '</option>').join('') + '</select></div>' +
+        '<div><label for="e-l2">المادة</label><input id="e-l2" value="' + esc(e.l2) + '" placeholder="مثال: الرياضيات"></div>';
+      else if (e.sec) place += '<div><label for="e-l1">النوع (اختياري)</label><input id="e-l1" value="' + esc(e.l1) + '" placeholder="مثال: أقلام"></div>';
+    } else place = '<p class="hint">' + esc([e.sec, e.l1, e.l2].filter(Boolean).join(' · ')) + '</p>';
+    return '<div class="card">' + place +
+      '<div><label for="e-name">اسم المنتج</label><input id="e-name" value="' + esc(e.name) + '"></div>' +
+      '<div><label for="e-price">السعر (دينار)</label><input id="e-price" type="number" inputmode="numeric" min="0" step="250" dir="ltr" value="' + esc(e.price) + '"></div>' +
+      '<div><label>الصورة</label><button class="photo" data-act="pick" aria-label="اختيار صورة">' +
+      (S.imgNew ? '<img src="' + S.imgNew + '" alt="">' : img ? imgTag(img, '') : '<span style="font-size:40px">📷</span>') +
+      '<span>' + (img ? 'اضغط لتغيير الصورة' : 'اضغط لاختيار صورة من الهاتف') + '</span></button></div>' +
+      msg() + '<button data-act="back">رجوع بدون حفظ</button></div>';
+  },
+  ads() {
+    return '<p class="hint">الإعلانات تظهر في أعلى الصفحة الرئيسية للتطبيق وتتبدل كل ٤ ثوانٍ. أضف صورة، وإن شئت نصاً قصيراً تحتها.</p>' +
+      '<button class="red" data-act="addAd">+ إضافة إعلان بصورة</button>' +
+      (S.ads.length ? S.ads.map((a, i) => '<div class="ad">' + (a.data ? '<img src="' + a.data + '" alt="">' : a.img ? imgTag(a.img, '') : '') +
+        '<input data-ad="' + i + '" value="' + esc(a.text) + '" placeholder="نص تحت الصورة (اختياري)" aria-label="نص الإعلان">' +
+        '<button class="small" data-act="delAd" data-v="' + i + '">حذف هذا الإعلان</button></div>').join('') : '<div class="card"><p>لا توجد إعلانات.</p></div>');
+  },
+  staff() {
+    return '<div class="card"><h2>كلمة سر الموظف</h2><p class="hint">الموظف يستطيع فقط إضافة المنتجات وتعديل الاسم والسعر والصورة. ' +
+      (S.d.hasStaff ? 'توجد كلمة سر حالياً؛ كتابة جديدة تلغي القديمة وتخرج الموظف.' : 'لم تُضبط بعد.') + '</p>' +
+      '<div><label for="s-pass">كلمة سر الموظف الجديدة</label><input id="s-pass" type="text" autocomplete="off" dir="ltr"></div>' +
+      '<button class="red" data-act="staff"' + (S.busy ? ' disabled' : '') + '>حفظ كلمة سر الموظف</button></div>';
+  }
+};
+
+function render() {
+  $('app').innerHTML = S.view === 'form' ? V.form() : V[S.view]();
+  $('hback').innerHTML = S.view === 'form' ? '<button data-act="back" aria-label="رجوع للصفحة السابقة">→ رجوع</button>' : '';
+  $('hbtn').innerHTML = S.auth ? '<button data-act="logout">خروج</button>' : '';
+  const bar = $('bar');
+  let b = '';
+  if (S.view === 'form') b = '<button class="red" data-act="save"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الرفع…' : '⬆ رفع ونشر في التطبيق') + '</button>';
+  if (S.view === 'main' && S.tab === 'ads') b = '<button class="red" data-act="saveAds"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الرفع…' : '⬆ رفع الإعلانات') + '</button>';
+  bar.hidden = !b; bar.innerHTML = b;
+  hydrate();
+}
+function load() {
+  S.view = 'loading'; render();
+  api('admin_get').then(r => {
+    if (!r.ok) { S.view = S.d && S.auth ? 'main' : 'login'; say(r.error || 'تعذر التحميل'); render(); return; }
+    S.d = r; S.ads = (r.ads || []).map(a => ({ text: a.text || '', img: a.img || '' }));
+    S.view = 'main'; render();
+  });
+}
+const val = id => { const e = $(id); return e ? e.value.trim() : ''; };
+function keepForm() {
+  if (!S.edit) return;
+  ['name', 'price', 'l1', 'l2'].forEach(k => { const e = $('e-' + k); if (e) S.edit[k] = e.value; });
+}
+function keepAds() { document.querySelectorAll('[data-ad]').forEach(e => { S.ads[+e.dataset.ad].text = e.value; }); }
+
+const ACT = {
+  setup(d) { S.setup = d.v === '1'; say(''); render(); },
+  sendCode() {
+    S.busy = true; say(''); render();
+    api('admin_code').then(r => { S.busy = false; say(r.ok ? 'تم الإرسال. افتح تيليغرام.' : r.error, r.ok); render(); });
+  },
+  create() {
+    const code = val('a-code'), password = $('a-new').value;
+    if (!code || password.length < 6) { say('اكتب الرمز وكلمة سر من ٦ رموز على الأقل'); render(); return; }
+    S.busy = true; say(''); render();
+    api('admin_login', { create: true, code, password }).then(done);
+  },
+  login() {
+    const password = $('a-pass').value;
+    if (!password) { say('اكتب كلمة السر'); render(); return; }
+    S.busy = true; say(''); render();
+    api('admin_login', { password }).then(done);
+  },
+  logout() { S.auth = null; store.set('rw_admin', null); S.d = null; S.view = 'login'; S.setup = false; say(''); render(); },
+  tab(d) { if (S.tab === 'ads') keepAds(); S.tab = d.v; say(''); render(); },
+  add() { S.edit = { id: '', sec: S.f, l1: '', l2: '', name: '', price: '', img: '' }; S.imgNew = ''; say(''); openForm(); },
+  edit(d) { const p = S.d.products.find(x => x.id === d.v); if (!p) return; S.edit = Object.assign({}, p); S.imgNew = ''; say(''); openForm(); },
+  back() { if (history.state && history.state.form) history.back(); else closeForm(); },
+  pick() { keepForm(); S.pickFor = 'item'; $('pick').click(); },
+  addAd() { keepAds(); S.pickFor = 'ad'; $('pick').click(); },
+  delAd(d) { keepAds(); S.ads.splice(+d.v, 1); say('حُذف من القائمة. اضغط "رفع الإعلانات" للحفظ.', true); render(); },
+  save() {
+    keepForm();
+    const e = S.edit, price = Number(e.price);
+    if (!e.id && !e.sec) return fail('اختر القسم');
+    if (!e.id && stagedSec(e.sec) && (!e.l1 || !String(e.l2).trim())) return fail('اختر المرحلة واكتب المادة');
+    if (!String(e.name).trim()) return fail('اكتب اسم المنتج');
+    if (e.price === '' || !(price >= 0)) return fail('اكتب السعر بالأرقام');
+    S.busy = true; say(''); render();
+    const up = S.imgNew ? api('admin_img', { data: S.imgNew }) : Promise.resolve({ ok: true, id: e.img });
+    up.then(r => {
+      if (!r.ok) throw new Error(r.error || 'تعذر رفع الصورة');
+      if (S.imgNew) { IMGS[r.id] = S.imgNew; store.set('rwi_' + r.id, S.imgNew); }
+      const it = { id: e.id, sec: e.sec, l1: e.l1, l2: e.l2, name: String(e.name).trim(), price: Math.round(price), img: r.id || '' };
+      return api('admin_items', { items: [it] }).then(x => { if (!x.ok) throw new Error(x.error || 'تعذر الحفظ'); return x; });
+    }).then(() => {
+      S.busy = false; S.imgNew = ''; if (history.state && history.state.form) history.back(); else closeForm();
+      api('admin_get').then(r => { if (r.ok) S.d = r; say('تم الرفع ✓ يظهر في التطبيق الآن.', true); render(); });
+    }).catch(err => { S.busy = false; say(err.message); render(); });
+  },
+  saveAds() {
+    keepAds(); S.busy = true; say(''); render();
+    let chain = Promise.resolve();
+    S.ads.forEach(a => {
+      if (!a.data) return;
+      chain = chain.then(() => api('admin_img', { data: a.data }).then(r => {
+        if (!r.ok) throw new Error(r.error || 'تعذر رفع الصورة');
+        IMGS[r.id] = a.data; store.set('rwi_' + r.id, a.data); a.img = r.id; delete a.data;
+      }));
+    });
+    chain.then(() => api('admin_ads', { ads: S.ads.map(a => ({ text: a.text, img: a.img })) })).then(r => {
+      if (!r.ok) throw new Error(r.error || 'تعذر الحفظ');
+      S.busy = false; say('تم رفع الإعلانات ✓', true); render();
+    }).catch(err => { S.busy = false; say(err.message); render(); });
+  },
+  staff() {
+    const password = val('s-pass');
+    if (password.length < 4) { say('كلمة السر من ٤ رموز على الأقل'); render(); return; }
+    S.busy = true; render();
+    api('admin_staff', { password }).then(r => { S.busy = false; if (r.ok) S.d.hasStaff = true; say(r.ok ? 'تم حفظ كلمة سر الموظف ✓ أعطها له.' : r.error, r.ok); render(); });
+  }
+};
+function openForm() { S.view = 'form'; render(); window.scrollTo(0, 0); try { history.pushState({ form: 1 }, ''); } catch (e) {} }
+function closeForm() { const keep = S.good ? S.msg : ''; S.view = 'main'; S.edit = null; S.imgNew = ''; say(keep, !!keep); render(); }
+window.addEventListener('popstate', () => { if (S.view === 'form') closeForm(); });
+function fail(t) { say(t); render(); window.scrollTo(0, document.body.scrollHeight); }
+function done(r) {
+  S.busy = false;
+  if (!r.ok) { if (r.needSetup) S.setup = true; say(r.error || 'تعذر الدخول'); render(); return; }
+  S.auth = { token: r.token, role: r.role }; store.set('rw_admin', S.auth); S.setup = false; say(''); S.tab = 'items'; load();
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && ACT[b.dataset.act] && !b.disabled) ACT[b.dataset.act](b.dataset); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (e.target.id === 'a-pass') ACT.login();
+  if (e.target.id === 'a-new') ACT.create();
+});
+document.addEventListener('change', e => {
+  if (e.target.dataset.change === 'filter') { S.f = e.target.value; render(); }
+  if (e.target.dataset.change === 'esec') { keepForm(); S.edit.sec = e.target.value; S.edit.l1 = ''; render(); }
+  if (e.target.id === 'pick' && e.target.files[0]) {
+    const f = e.target.files[0]; e.target.value = '';
+    if (S.view === 'form') keepForm(); else if (S.tab === 'ads') keepAds();
+    say('جارِ تجهيز الصورة…', true); render();
+    shrink(f).then(d => {
+      say('');
+      if (S.view === 'main' && S.tab === 'ads') { S.ads.unshift({ text: '', img: '', data: d }); say('أُضيفت. اكتب نصاً إن أردت ثم اضغط "رفع الإعلانات".', true); }
+      else S.imgNew = d;
+      render();
+    }).catch(() => { say('تعذر قراءة هذه الصورة. جرّب صورة أخرى (JPG أو PNG).'); render(); });
+  }
+});
+let qt;
+document.addEventListener('input', e => {
+  if (e.target.id !== 'f-q') return;
+  clearTimeout(qt); qt = setTimeout(() => {
+    S.q = e.target.value; const pos = e.target.selectionStart; render();
+    const n = $('f-q'); n.focus(); try { n.setSelectionRange(pos, pos); } catch (x) {}
+  }, 250);
+});
+if (S.auth) load(); else render();
+</script>
+</body>
+</html>
