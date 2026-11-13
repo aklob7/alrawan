@@ -1,0 +1,16 @@
+{
+  "name": "طلبات الروان",
+  "short_name": "طلبات الروان",
+  "id": "./orders-m3.html",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./orders-m3.html",
+  "scope": "./orders-m3.html",
+  "display": "standalone",
+  "background_color": "#B50E14",
+  "theme_color": "#B50E14",
+  "icons": [
+    { "src": "icon2-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon2-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

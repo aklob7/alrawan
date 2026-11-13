@@ -83,7 +83,7 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
   set(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 };
-const S = { branches: [], orders: null, ov: '', oseen: store.get('rw_oseen', []), odone: false, rej: '', caps: null, capNew: false, capPw: '', auth: store.get('rw_admin', null), view: 'login', d: null, tab: 'orders', q: '', f: '', edit: null, img: '', imgNew: '', msg: '', good: false, busy: false, setup: false, ads: [] };
+const S = { branches: [], orders: null, ov: '', oseen: store.get('rw_oseen', []), odone: false, rej: '', caps: null, capNew: false, capPw: '', auth: store.get('rw_admin', null), view: 'login', d: null, tab: 'items', q: '', f: '', edit: null, img: '', imgNew: '', msg: '', good: false, busy: false, setup: false, ads: [] };
 
 function api(action, data) {
   if (!API) return Promise.resolve({ ok: false, error: 'رابط الخادم غير موجود في config.js' });
@@ -155,11 +155,11 @@ const V = {
   main() {
     const own = S.d.role === 'owner';
     $('ttl').textContent = own ? 'لوحة الروان · صاحب المكتبة' : 'لوحة الروان · الموظف';
-    const list = own ? [['orders', 'الطلبات'], ['items', 'المنتجات'], ['ads', 'الإعلانات'], ['branches', 'الفروع'], ['caps', 'الكباتن'], ['staff', 'الموظف']] : [['orders', 'الطلبات'], ['items', 'المنتجات']];
+    const list = own ? [['items', 'المنتجات'], ['ads', 'الإعلانات'], ['branches', 'الفروع'], ['caps', 'الكباتن'], ['staff', 'الموظف'], ['apps', 'التطبيقات']] : [['items', 'المنتجات'], ['apps', 'التطبيقات']];
     const nNew = (S.orders || []).filter(o => o.status === 'جديد' || o.status === 'مؤجل').length;
     const tabs = '<div class="tabs' + (own ? '' : ' two') + '">' + list.map(t =>
       '<button class="' + (S.tab === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '">' + t[1] + (t[0] === 'orders' && nNew ? ' (' + nNew + ')' : '') + '</button>').join('') + '</div>';
-    return tabs + msg() + (S.tab === 'orders' ? V.orders() : S.tab === 'ads' && own ? V.ads() : S.tab === 'branches' && own ? V.branches() : S.tab === 'caps' && own ? V.caps() : S.tab === 'staff' && own ? V.staff() : V.items());
+    return tabs + msg() + (S.tab === 'apps' ? V.apps() : S.tab === 'orders' ? V.orders() : S.tab === 'ads' && own ? V.ads() : S.tab === 'branches' && own ? V.branches() : S.tab === 'caps' && own ? V.caps() : S.tab === 'staff' && own ? V.staff() : V.items());
   },
   orders() {
     if (!S.orders) return '<div class="card"><p style="font-weight:800">جارِ تحميل الطلبات…</p></div>';
@@ -172,6 +172,13 @@ const V = {
       grp('قيد الإعداد', o => o.status === 'قيد الإعداد' || o.status === 'مقبول') +
       grp('جاهزة / مع الكابتن', o => o.status === 'جاهز للاستلام' || o.status === 'قيد التوصيل' || o.status === 'في الطريق');
     return sub + '<p class="hint">تتحدث تلقائياً كل ١٥ ثانية، ويصدر صوت عند وصول طلب جديد.</p>' + (body || '<div class="card"><p style="font-weight:800">لا توجد طلبات جارية الآن.</p></div>');
+  },
+  apps() {
+    const u = f => new URL(f, location.href).href;
+    const row = (t, d, f) => '<div class="card"><h2>' + t + '</h2><p class="hint">' + d + '</p><input readonly dir="ltr" value="' + esc(u(f)) + '" onclick="this.select()" aria-label="' + t + '"><a class="btn red" style="display:flex;align-items:center;justify-content:center;text-decoration:none;border-radius:14px;min-height:52px;font-weight:800" href="' + esc(u(f)) + '" target="_blank" rel="noopener">فتح</a></div>';
+    return row('طلبات الروان', 'تطبيق الطلبات للمكتبة: افتحه على جهاز المكتبة واتركه مفتوحاً، فيصدر صوت مع كل طلب جديد. يدخل بنفس كلمة سر اللوحة.', 'orders-m3.html') +
+      (S.d.role === 'owner' ? row('كابتن الروان', 'تطبيق المندوبين. أضف الكباتن من تبويب "الكباتن".', 'captain-q8.html') : '') +
+      row('تطبيق الزبائن', 'الرابط الذي تنشره للزبائن.', 'index.html');
   },
   caps() {
     const link = new URL('captain-q8.html', location.href).href;
@@ -293,10 +300,10 @@ function loadOrders(quiet) {
   });
 }
 setInterval(() => {
-  if (!S.auth || !S.d || document.hidden) return;
+  if (!S.auth || !S.d || document.hidden || S.tab !== 'orders') return;
   api('ping').then(r => { if (r.ok && r.v !== S.ov) loadOrders(true); });
 }, 15000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { document.title = 'لوحة الروان'; if (S.auth && S.d) loadOrders(true); } });
+
 function render() {
   $('app').innerHTML = S.view === 'form' ? V.form() : V[S.view]();
   $('hback').innerHTML = S.view === 'form' ? '<button data-act="back" aria-label="رجوع للصفحة السابقة">→ رجوع</button>' : '';
@@ -314,7 +321,7 @@ function load() {
   api('admin_get').then(r => {
     if (!r.ok) { S.view = S.d && S.auth ? 'main' : 'login'; say(r.error || 'تعذر التحميل'); render(); return; }
     S.d = r; S.ads = (r.ads || []).map(a => ({ text: a.text || '', img: a.img || '' })); S.branches = (r.branches || []).map(b => ({ name: b.name || '', phone: b.phone || '', map: b.map || '' }));
-    S.view = 'main'; render(); loadOrders(true);
+    S.view = 'main'; render();
   });
 }
 const val = id => { const e = $(id); return e ? e.value.trim() : ''; };
@@ -456,7 +463,7 @@ function fail(t) { say(t); render(); window.scrollTo(0, document.body.scrollHeig
 function done(r) {
   S.busy = false;
   if (!r.ok) { if (r.needSetup) S.setup = true; say(r.error || 'تعذر الدخول'); render(); return; }
-  S.auth = { token: r.token, role: r.role }; store.set('rw_admin', S.auth); S.setup = false; say(''); S.tab = 'orders'; beep.c = null; load();
+  S.auth = { token: r.token, role: r.role }; store.set('rw_admin', S.auth); S.setup = false; say(''); S.tab = 'items'; load();
 }
 document.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && ACT[b.dataset.act] && !b.disabled) ACT[b.dataset.act](b.dataset); });
 document.addEventListener('keydown', e => {

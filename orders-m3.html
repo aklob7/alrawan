@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#B50E14">
+<meta name="robots" content="noindex">
+<title>طلبات الروان</title>
+<link rel="manifest" href="orders.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon2.png">
+<link rel="icon" href="icon2-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--red:#D91219;--ink:#111;--line:#e3e3e3;--soft:#f6f6f6;--ok:#127a3a}
+*{box-sizing:border-box;margin:0}
+body{font-family:Cairo,system-ui,sans-serif;background:#f3f3f3;color:var(--ink);font-size:17px;line-height:1.5}
+header{background:#B50E14;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:3}
+header h1{font-size:20px;flex:1}
+header .dot{width:10px;height:10px;border-radius:50%;background:#2ecc71;box-shadow:0 0 0 3px rgba(46,204,113,.3)}
+header button{width:auto;min-height:36px;padding:2px 12px;font-size:14px;background:#fff;color:#B50E14;border:none}
+main{max-width:720px;margin:0 auto;padding:14px;display:flex;flex-direction:column;gap:12px;padding-bottom:40px}
+h2{font-size:19px}
+h3{font-size:16px;margin-top:4px}
+button,.btn{font:inherit;font-weight:800;border-radius:14px;min-height:52px;padding:10px 16px;width:100%;cursor:pointer;border:2px solid var(--ink);background:#fff;color:var(--ink);text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px}
+button:disabled{opacity:.5}
+.red{background:var(--red);border-color:var(--red);color:#fff}
+.black{background:var(--ink);color:#fff}
+label{font-weight:800;display:block;margin-bottom:4px}
+input{font:inherit;width:100%;min-height:52px;padding:10px 12px;border:2px solid #bbb;border-radius:12px;background:#fff;color:var(--ink)}
+input:focus,button:focus-visible,.btn:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.card{background:#fff;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.ord{border:2px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;background:#fff}
+.ord.new{border-color:var(--red);box-shadow:0 0 0 3px rgba(217,18,25,.15);animation:pulse 1.6s ease-in-out 3}
+@keyframes pulse{50%{box-shadow:0 0 0 8px rgba(217,18,25,.08)}}
+.ord .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tag{display:inline-block;border-radius:999px;padding:2px 10px;font-size:13px;font-weight:800;background:var(--soft);border:1.5px solid #ccc}
+.tag.r{background:var(--red);color:#fff;border-color:var(--red)}
+.tag.g{background:#e6f5ec;color:var(--ok);border-color:#9fd6b2}
+.tag.n{background:#1B1F3A;color:#fff;border-color:#1B1F3A}
+.ord .it{font-weight:700;white-space:pre-line;background:var(--soft);border-radius:10px;padding:8px 10px}
+.ord .ln{display:flex;justify-content:space-between;gap:8px;font-size:15px}
+.ord a{color:var(--red);font-weight:800}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btns.one{grid-template-columns:1fr}
+.sub{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sub button{min-height:44px;font-size:15px}
+.sub .on{background:var(--ink);color:#fff}
+.msg{padding:10px 12px;border-radius:12px;font-weight:700;background:#fdecec;color:#8a0a0f}
+.msg.good{background:#e6f5ec;color:var(--ok)}
+.hint{color:#555;font-size:14px}
+.sound{background:#1B1F3A;color:#fff;border-color:#1B1F3A}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tools button{min-height:44px;font-size:14px}
+@media (min-width:760px){.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}}
+@media (prefers-reduced-motion:reduce){.ord.new{animation:none}}
+</style>
+</head>
+<body>
+<header><span class="dot" id="dot" aria-hidden="true"></span><h1>طلبات الروان</h1><span id="hbtn"></span></header>
+<main id="app" aria-live="polite"></main>
+<script src="config.js"></script>
+<script>
+'use strict';
+const API = window.RAWAN_API || '';
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const money = n => Number(n || 0).toLocaleString('en-US') + ' د.ع';
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+const S = { auth: store.get('rw_ord', null), orders: null, v: '', done: false, rej: '', msg: '', good: false, busy: false, seen: store.get('rw_ord_seen', []), sound: false, awake: false };
+
+function api(action, data) {
+  if (!API) return Promise.resolve({ ok: false, error: 'رابط الخادم غير موجود' });
+  return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ action, admin: S.auth && S.auth.token }, data || {})) })
+    .then(r => r.json()).catch(() => ({ ok: false, error: 'تعذر الاتصال. تحقق من الإنترنت.' }))
+    .then(r => { if (r.auth) { S.auth = null; store.set('rw_ord', null); S.orders = null; } return r; });
+}
+function say(t, good) { S.msg = t; S.good = !!good; }
+function msg() { return S.msg ? '<p class="msg' + (S.good ? ' good' : '') + '" role="alert">' + esc(S.msg) + '</p>' : ''; }
+
+/* ---------- الصوت وإبقاء الشاشة مضاءة ---------- */
+let audio = null, lock = null;
+function enableSound() {
+  try { const A = window.AudioContext || window.webkitAudioContext; if (A) { audio = audio || new A(); audio.resume(); S.sound = true; } } catch (e) {}
+}
+function beep() {
+  try { if (navigator.vibrate) navigator.vibrate([250, 120, 250, 120, 250]); } catch (e) {}
+  if (!audio) return;
+  try {
+    const t = audio.currentTime;
+    [0, 0.28, 0.56].forEach(d => { const o = audio.createOscillator(), g = audio.createGain(); o.frequency.value = 880; g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.4, t + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.22); o.connect(g); g.connect(audio.destination); o.start(t + d); o.stop(t + d + 0.25); });
+  } catch (e) {}
+}
+function keepAwake() {
+  if (!('wakeLock' in navigator)) { say('هذا الجهاز لا يدعم إبقاء الشاشة مضاءة من المتصفح. غيّر مدة إطفاء الشاشة من إعدادات الجهاز.'); render(); return; }
+  navigator.wakeLock.request('screen').then(l => { lock = l; S.awake = true; l.addEventListener('release', () => { S.awake = false; render(); }); render(); }).catch(() => {});
+}
+
+/* ---------- الشاشات ---------- */
+const TAGC = { 'جديد': 'r', 'مؤجل': 'n', 'تم التسليم': 'g' };
+function card(o) {
+  const tm = (o.date.split(' ')[1] || o.date), del = o.mode === 'delivery', isNew = (o.status === 'جديد' || o.status === 'مؤجل') && !S.seen.includes(o.no);
+  const st = o.status === 'مقبول' ? 'قيد الإعداد' : o.status, no = esc(o.no);
+  let b = '';
+  if (S.rej === o.no) b = '<div><label for="rj">سبب الرفض</label><input id="rj" placeholder="مثال: المادة غير متوفرة"></div><div class="btns"><button class="red" data-act="st" data-v="' + no + '" data-to="مرفوض">تأكيد الرفض</button><button data-act="rej" data-v="">تراجع</button></div>';
+  else if (st === 'جديد' || st === 'مؤجل') b = '<div class="btns"><button class="red" data-act="st" data-v="' + no + '" data-to="قيد الإعداد">✓ قبول — قيد الإعداد</button><button data-act="rej" data-v="' + no + '">رفض</button></div>';
+  else if (st === 'قيد الإعداد' && !del) b = '<div class="btns"><button class="red" data-act="st" data-v="' + no + '" data-to="جاهز للاستلام">جاهز للاستلام</button><button data-act="rej" data-v="' + no + '">رفض</button></div>';
+  else if (st === 'قيد الإعداد' && del && !o.cid) b = '<p class="hint">⏳ بانتظار أن يقبله كابتن…</p><div class="btns one"><button data-act="rej" data-v="' + no + '">رفض الطلب</button></div>';
+  else if (st === 'جاهز للاستلام') b = '<div class="btns one"><button class="red" data-act="st" data-v="' + no + '" data-to="تم التسليم">تم التسليم للزبون</button></div>';
+  const last = o.log ? o.log.split(' | ').pop() : '';
+  return '<div class="ord' + (isNew ? ' new' : '') + '"><div class="top"><b style="font-size:19px">' + no + '</b><span class="tag ' + (TAGC[o.status] || '') + '">' + esc(o.status) + '</span>' +
+    '<span class="hint" style="margin-inline-start:auto">' + esc(tm) + '</span></div>' +
+    '<div class="ln"><b>' + esc(o.name) + '</b><a href="tel:' + esc(o.phone) + '" dir="ltr">' + esc(o.phone) + '</a></div>' +
+    '<div class="it">' + esc(o.items.split('، ').join('\n')) + '</div>' +
+    '<div class="ln"><span>' + (del ? '🛵 توصيل' + (o.area ? ' — ' + esc(o.area) : '') : '🏪 استلام من المحل') + '</span><b>' + money(o.total) + (o.pay === 'online' ? ' · إلكتروني' : ' · عند الاستلام') + '</b></div>' +
+    (o.loc ? '<a href="' + esc(o.loc) + '" target="_blank" rel="noopener">📍 فتح الموقع على الخريطة</a>' : '') +
+    (o.note ? '<p class="hint">ملاحظة: ' + esc(o.note) + '</p>' : '') +
+    (o.captain ? '<div class="ln"><span>الكابتن: <b>' + esc(o.captain) + '</b></span><span class="hint">' + esc(last) + '</span></div>' : '') +
+    (o.reason ? '<p class="msg">السبب: ' + esc(o.reason) + '</p>' : '') + b + '</div>';
+}
+function loginView() {
+  return '<div class="card"><h2>دخول المكتبة</h2><p class="hint">نفس كلمة سر لوحة التحكم (لك أو للموظف).</p>' +
+    '<div><label for="pw">كلمة السر</label><input id="pw" type="password" autocomplete="current-password"></div>' +
+    msg() + '<button class="red" data-act="login"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الدخول…' : 'دخول') + '</button></div>';
+}
+function mainView() {
+  if (!S.orders) return '<div class="card"><p style="font-weight:800">جارِ تحميل الطلبات…</p></div>';
+  const DONE = { 'تم التسليم': 1, 'مرفوض': 1, 'راجع': 1 };
+  const act = S.orders.filter(o => !DONE[o.status]), fin = S.orders.filter(o => DONE[o.status]);
+  const tools = '<div class="tools">' + (S.sound ? '<button disabled>🔔 الصوت مفعّل</button>' : '<button class="sound" data-act="sound">🔔 اضغط لتفعيل الصوت</button>') +
+    (S.awake ? '<button disabled>☀️ الشاشة تبقى مضاءة</button>' : '<button data-act="awake">☀️ إبقاء الشاشة مضاءة</button>') + '</div>';
+  const sub = '<div class="sub"><button class="' + (S.done ? '' : 'on') + '" data-act="sub" data-v="0">الجارية (' + act.length + ')</button><button class="' + (S.done ? 'on' : '') + '" data-act="sub" data-v="1">انتهت اليوم (' + fin.length + ')</button></div>';
+  if (S.done) return tools + sub + msg() + (fin.length ? fin.map(card).join('') : '<div class="card"><p>لا شيء بعد اليوم.</p></div>');
+  const grp = (t, f) => { const xs = act.filter(f); return xs.length ? '<div><h3>' + t + ' (' + xs.length + ')</h3><div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">' + xs.map(card).join('') + '</div></div>' : ''; };
+  const body = grp('طلبات جديدة', o => o.status === 'جديد' || o.status === 'مؤجل') +
+    grp('قيد الإعداد', o => o.status === 'قيد الإعداد' || o.status === 'مقبول') +
+    grp('جاهزة / مع الكابتن', o => o.status === 'جاهز للاستلام' || o.status === 'قيد التوصيل' || o.status === 'في الطريق');
+  return tools + sub + msg() + (body ? '<div class="grid2">' + body + '</div>' : '<div class="card"><p style="font-weight:800">لا توجد طلبات جارية الآن.</p><p class="hint">تتحدث الصفحة كل ١٠ ثوانٍ، ويصدر صوت عند وصول طلب جديد.</p></div>');
+}
+function render() {
+  const f = document.activeElement && document.activeElement.id;
+  $('app').innerHTML = S.auth ? mainView() : loginView();
+  $('hbtn').innerHTML = S.auth ? '<button data-act="logout">خروج</button>' : '';
+  if (f && $(f)) $(f).focus();
+}
+
+/* ---------- التحديث ---------- */
+let known = null;
+function load(quiet) {
+  return api('admin_orders').then(r => {
+    $('dot').style.background = r.ok ? '#2ecc71' : '#e67e22';
+    if (!r.ok) { if (!quiet || r.auth) { say(r.error || 'تعذر التحميل'); render(); } return; }
+    S.orders = r.orders; S.v = r.v;
+    const news = r.orders.filter(o => o.status === 'جديد' || o.status === 'مؤجل').map(o => o.no);
+    const fresh = known && news.some(n => !known.includes(n));
+    known = news;
+    document.title = news.length ? '(' + news.length + ') طلبات الروان' : 'طلبات الروان';
+    if (fresh) { beep(); S.done = false; }
+    if (!(document.activeElement && document.activeElement.id === 'rj')) render();
+  });
+}
+setInterval(() => {
+  if (!S.auth) return;
+  api('ping').then(r => { $('dot').style.background = r.ok ? '#2ecc71' : '#e67e22'; if (r.ok && r.v !== S.v) load(true); });
+}, 10000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && S.auth) { load(true); if (S.awake === false && lock) keepAwake(); } });
+
+const ACT = {
+  login() {
+    const password = $('pw').value;
+    if (!password) { say('اكتب كلمة السر'); render(); return; }
+    S.busy = true; say(''); render(); enableSound();
+    api('admin_login', { password }).then(r => {
+      S.busy = false;
+      if (!r.ok) { say(r.error || 'تعذر الدخول'); render(); return; }
+      S.auth = { token: r.token, role: r.role }; store.set('rw_ord', S.auth); say(''); render(); load();
+    });
+  },
+  logout() { S.auth = null; store.set('rw_ord', null); S.orders = null; known = null; say(''); render(); },
+  sound() { enableSound(); beep(); render(); },
+  awake() { keepAwake(); },
+  sub(d) { S.done = d.v === '1'; render(); },
+  rej(d) { S.rej = d.v; render(); if (d.v && $('rj')) $('rj').focus(); },
+  st(d) {
+    const reason = d.to === 'مرفوض' ? ($('rj') ? $('rj').value.trim() : '') : '';
+    if (d.to === 'مرفوض' && !reason) { say('اكتب سبب الرفض'); render(); return; }
+    S.seen = S.seen.concat([d.v]).slice(-300); store.set('rw_ord_seen', S.seen);
+    S.busy = true;
+    api('admin_status', { no: d.v, to: d.to, reason }).then(r => {
+      S.busy = false; S.rej = '';
+      say(r.ok ? 'تم ✓ ' + d.v + ' ← ' + d.to : (r.error || 'تعذر التحديث'), r.ok);
+      load(true).then(render);
+    });
+  }
+};
+document.addEventListener('click', e => {
+  if (!S.sound && S.auth) enableSound();
+  const b = e.target.closest('[data-act]'); if (b && ACT[b.dataset.act] && !b.disabled) ACT[b.dataset.act](b.dataset);
+});
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'pw') ACT.login(); });
+render();
+if (S.auth) load();
+</script>
+</body>
+</html>
