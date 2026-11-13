@@ -77,6 +77,7 @@ input,select,textarea{box-shadow:inset 0 3px 0 rgba(0,0,0,.08)}
 .coverbtn{padding:0;width:auto;min-height:0;background:none;border-radius:10px;flex-shrink:0;box-shadow:0 5px 0 #CFCFCF,0 10px 14px rgba(0,0,0,.28)}
 .cover{display:block;width:96px;height:134px;object-fit:cover;border-radius:10px;background:#eee}
 #zoom{position:fixed;inset:0;z-index:9;background:rgba(0,0,0,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px;border:none;border-radius:0;width:100%;box-shadow:none}
+.adimg{width:100%;max-height:260px;object-fit:cover;border-radius:12px;display:block;background:#eee}
 #zoom img{max-width:100%;max-height:82vh;border-radius:14px;box-shadow:0 20px 40px rgba(0,0,0,.6)}
 #zoom span{color:#fff;font-weight:800}
 .owl{display:block;flex-shrink:0;overflow:visible}
@@ -138,7 +139,7 @@ const store = {
 };
 const S = {
   view: 'splash', user: store.get('rw_user', null), cart: store.get('rw_cart', {}), cat: null,
-  sec: '', path: [], orders: [], stamps: 0, msg: '', busy: false, anim: true, drawer: false, photo: store.get('rw_photo', ''), seen: store.get('rw_seen', []), promo: { code: '', discount: 0 }, regType: 'student', ad: 0,
+  sec: '', path: [], orders: [], stamps: 0, msg: '', busy: false, anim: true, drawer: false, photo: store.get('rw_photo', ''), seen: store.get('rw_seen', []), promo: { code: '', discount: 0 }, regType: 'student', ad: 0, rewards: 0, reward: '', newCode: '',
   co: { mode: 'pickup', area: '', pay: 'cod', lat: null, lng: null, note: '', addr: '' }
 };
 const SV = p => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>';
@@ -173,6 +174,33 @@ const I = {
 const offerId = o => o.title + '|' + o.text + '|' + o.date;
 const offers = () => (S.cat && S.cat.offers) || [];
 const unseen = () => offers().filter(o => !S.seen.includes(offerId(o))).length;
+/* ---------- الصور: أسماء ملفات على الموقع، أو صور مرفوعة من لوحة التحكم (img_...) ---------- */
+const IMGS = {}, IMG_WAIT = {};
+const isFile = v => /^[\w.-]+\.(jpg|jpeg|png|webp)$/i.test(v || '');
+const isUp = v => /^img_[\w-]+$/.test(v || '');
+const hasImg = v => isFile(v) || isUp(v);
+function imgTag(v, cls) {
+  if (isFile(v)) return '<img class="' + cls + '" src="' + esc(v) + '" alt="" loading="lazy">';
+  if (!isUp(v)) return '';
+  if (!IMGS[v]) { const c = store.get('rwi_' + v, ''); if (c) IMGS[v] = c; }
+  return '<img class="' + cls + '" data-img="' + esc(v) + '" alt=""' + (IMGS[v] ? ' src="' + IMGS[v] + '"' : '') + '>';
+}
+function hydrate() {
+  document.querySelectorAll('img[data-img]:not([src])').forEach(el => {
+    const id = el.dataset.img;
+    if (IMG_WAIT[id] || DEMO) return;
+    IMG_WAIT[id] = api('img', { id }).then(r => {
+      if (!r.ok || !r.data) return;
+      IMGS[id] = r.data; store.set('rwi_' + id, r.data);
+      document.querySelectorAll('img[data-img="' + id + '"]').forEach(x => { x.src = r.data; });
+    });
+  });
+}
+const adOf = a => typeof a === 'string' ? { text: a, img: '' } : (a || { text: '', img: '' });
+function adHTML(a) {
+  a = adOf(a);
+  return (hasImg(a.img) ? imgTag(a.img, 'adimg') : '') + (a.text ? '<p style="font-size:18px;font-weight:800">' + esc(a.text) + '</p>' : '');
+}
 function drawerHTML() {
   const u = S.user, n = unseen();
   const av = S.photo ? '<img src="' + esc(S.photo) + '" alt="">' : esc((u.name || '؟').trim().charAt(0));
@@ -181,6 +209,7 @@ function drawerHTML() {
     '<strong style="font-size:21px">' + esc(u.name) + '</strong>' +
     '<span style="font-weight:700">' + (u.type === 'student' ? 'طالب' + (u.stage ? ' · ' + esc(u.stage) : '') : 'زبون') + '</span>' +
     '<span dir="ltr" style="font-weight:500">' + esc(u.phone) + '</span>' +
+    (u.code ? '<span style="font-weight:700">رقم الحساب: <b dir="ltr" style="letter-spacing:2px">' + esc(u.code) + '</b></span>' : '') +
     '<button class="b-white" style="width:auto;min-height:40px;padding:8px 14px;font-size:15px" data-act="photo">تغيير الصورة</button></div>' +
     '<button class="b-line ditem" data-act="orders">' + SV(I.history) + '<span>السجل</span></button>' +
     '<button class="b-line ditem" data-act="offers">' + SV(I.offer) + '<span>العروض</span>' + (n ? '<span class="badge">' + n + '</span>' : '') + '</button>' +
@@ -190,7 +219,11 @@ function drawerHTML() {
 }
 function refreshStatus() {
   if (!S.user) return;
-  api('status', auth()).then(r => { if (r.ok) { S.orders = r.orders || []; S.stamps = r.stamps || 0; if (S.view === 'home') render(); } });
+  api('status', auth()).then(r => { if (r.ok) { gotStatus(r); if (S.view === 'home') render(); } });
+}
+function gotStatus(r) {
+  S.orders = r.orders || []; S.stamps = r.stamps || 0; S.rewards = r.rewards || 0;
+  if (r.code && S.user && S.user.code !== r.code) { S.user.code = r.code; store.set('rw_user', S.user); }
 }
 const STATUS_TEXT = { 'جديد': 'أُرسل طلبك إلى المكتبة', 'مقبول': 'تم قبول طلبك', 'مرفوض': 'نعتذر، الطلب غير متوفر حالياً' };
 
@@ -211,9 +244,9 @@ const demoOrders = [];
 function demoApi(action, d) {
   if (action === 'catalog') return Promise.resolve({ ok: true, catalog: DEMO_CAT });
   if (action === 'promo') return Promise.resolve({ ok: false, error: 'أكواد الخصم تعمل بعد الربط بالخادم' });
-  if (action === 'register') return Promise.resolve({ ok: true, token: 'demo' });
-  if (action === 'login') return Promise.resolve({ ok: true, token: 'demo', name: 'زبون تجريبي', type: 'student', stage: 'مرحلة تجريبية ١' });
-  if (action === 'status') return Promise.resolve({ ok: true, orders: demoOrders, stamps: 3 });
+  if (action === 'register') return Promise.resolve({ ok: true, token: 'demo', code: 'DEMO42' });
+  if (action === 'login') return Promise.resolve({ ok: true, token: 'demo', code: 'DEMO42', name: 'زبون تجريبي', type: 'student', stage: 'مرحلة تجريبية ١' });
+  if (action === 'status') return Promise.resolve({ ok: true, orders: demoOrders, stamps: 12, rewards: 1, code: 'DEMO42' });
   if (action === 'order') {
     const c = calc();
     const o = { no: 'T' + (demoOrders.length + 1), date: 'تجريبي', items: cartLines().map(l => l.p.name + ' × ' + l.q).join('، '),
@@ -240,8 +273,11 @@ function calc() {
   const fee = Number(S.cat.settings.fee || 0);
   const area = S.cat.areas.find(a => a.name === S.co.area);
   const delivery = S.co.mode === 'delivery' && area ? Number(area.price) : 0;
-  const discount = Math.min(Number(S.promo.discount) || 0, subtotal);
-  return { subtotal, fee, delivery, discount, total: subtotal - discount + fee + delivery };
+  const rl = S.rewards > 0 && S.reward ? cartLines().find(l => String(l.p.id) === String(S.reward)) : null;
+  const max = Number(S.cat.settings.rewardMax) || 0;
+  const free = rl ? (max > 0 ? Math.min(rl.p.price, max) : rl.p.price) : 0;
+  const discount = Math.min(Number(S.promo.discount) || 0, subtotal - free);
+  return { subtotal, fee, delivery, discount, free, freeName: rl ? rl.p.name : '', total: subtotal - free - discount + fee + delivery };
 }
 function level() {
   let ps = S.cat.products.filter(p => p.sec === S.sec);
@@ -273,25 +309,30 @@ const V = {
     const stages = (S.cat.stages || []).length ? S.cat.stages : [...new Set(S.cat.products.filter(p => p.sec === 'الملازم').map(p => p.l1).filter(Boolean))];
     return '<div class="row"><img class="logo" src="' + LOGO + '" alt="" width="56" height="56"><h1>إنشاء حساب</h1></div>' + msg() +
       '<div class="card">' +
-      '<div class="field"><label for="f-code">كود التسجيل</label><input id="f-code" autocomplete="off" placeholder="الكود من المكتبة"><span class="hint">تحصل على الكود من مكتبة الروان.</span></div>' +
       '<div class="field"><label for="f-phone">رقم الهاتف</label><input id="f-phone" type="tel" inputmode="numeric" dir="ltr" placeholder="07XXXXXXXXX"></div>' +
       '<div class="grid"><button class="' + (S.regType === 'student' ? 'b-on' : 'b-line') + '" data-act="regType" data-v="student" aria-pressed="' + (S.regType === 'student') + '">طالب</button>' +
       '<button class="' + (S.regType === 'customer' ? 'b-on' : 'b-line') + '" data-act="regType" data-v="customer" aria-pressed="' + (S.regType === 'customer') + '">زبون</button></div>' +
       '<div class="field"><label for="f-name">الاسم</label><input id="f-name" placeholder="اكتب اسمك"></div>' +
-      '<div class="field"><label for="f-pass">كلمة السر</label><input id="f-pass" type="password" autocomplete="new-password" placeholder="٤ رموز على الأقل"><span class="hint">تحتاجها فقط إن غيّرت جهازك. احفظها.</span></div>' +
       (S.regType === 'student' ? '<div class="field"><label for="f-stage">المرحلة الدراسية</label><select id="f-stage"><option value="">اختر مرحلتك</option>' +
         stages.map(s => '<option>' + esc(s) + '</option>').join('') + '</select></div>' : '') +
-      '<button class="b-red" data-act="register"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ التسجيل…' : 'دخول التطبيق') + '</button></div>' +
+      '<button class="b-red" data-act="register"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ التسجيل…' : 'إنشاء الحساب') + '</button><span class="hint">سيظهر لك رقم حساب خاص بك. رقم الهاتف لا يُسجَّل بحسابين.</span></div>' +
       '<button class="b-white" data-act="toLogin">لدي حساب — تسجيل الدخول</button>';
   },
   login() {
     return '<div class="row"><img class="logo" src="' + LOGO + '" alt="" width="56" height="56"><h1>تسجيل الدخول</h1></div>' + msg() +
       '<div class="card">' +
       '<div class="field"><label for="l-phone">رقم الهاتف</label><input id="l-phone" type="tel" inputmode="numeric" dir="ltr" autocomplete="username" placeholder="07XXXXXXXXX"></div>' +
-      '<div class="field"><label for="l-pass">كلمة السر</label><input id="l-pass" type="password" autocomplete="current-password"></div>' +
+      '<div class="field"><label for="l-code">رقم الحساب</label><input id="l-code" dir="ltr" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:2px" placeholder="مثال: K7M2QX"></div>' +
       '<button class="b-red" data-act="login"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الدخول…' : 'دخول') + '</button>' +
-      '<span class="hint">نسيت كلمة السر؟ راجع مكتبة الروان.</span></div>' +
-      '<button class="b-white" data-act="toRegister">حساب جديد بكود المكتبة</button>';
+      '<span class="hint">رقم الحساب تجده في القائمة الجانبية على جهازك القديم. نسيته؟ راجع مكتبة الروان. (من سجّل سابقاً بكلمة سر يكتبها هنا)</span></div>' +
+      '<button class="b-white" data-act="toRegister">حساب جديد</button>';
+  },
+  welcome() {
+    return '<div class="center"><img class="logo" src="' + LOGO + '" alt="" width="90" height="90"><h1>تم إنشاء حسابك</h1>' +
+      '<div class="card" style="width:100%;text-align:center;align-items:center"><p style="font-weight:700">رقم حسابك</p>' +
+      '<p dir="ltr" style="font-size:38px;font-weight:900;letter-spacing:6px;color:#D91219">' + esc(S.newCode) + '</p>' +
+      '<p class="hint">احفظه أو صوّره. تحتاجه مع رقم هاتفك إذا دخلت من جهاز آخر. تجده دائماً في القائمة الجانبية.</p></div>' +
+      '<button class="b-white" data-act="home">دخول التطبيق</button></div>';
   },
   home() {
     const n = cartCount(), u = unseen(), ads = S.cat.ads;
@@ -300,10 +341,10 @@ const V = {
     return '<div class="row"><button class="icon b-white" style="position:relative" data-act="openDrawer" aria-label="القائمة' + (u ? '، ' + u + ' عروض جديدة' : '') + '">' + SV(I.menu) + (u ? '<span class="badge">' + u + '</span>' : '') + '</button>' +
       OWL(58) + '<h1 class="grow" style="font-size:22px">أهلاً ' + esc(S.user.name) + '</h1>' +
       '<button class="b-white" style="width:auto" data-act="cart">السلة' + (n ? ' (' + n + ')' : '') + '</button></div>' + msg() +
-      (ads.length ? '<div class="card adcard"><p id="ad" class="adin" style="font-size:18px;font-weight:800">' + esc(ads[S.ad % ads.length]) + '</p>' +
+      (ads.length ? '<div class="card adcard"><div id="ad" class="adin">' + adHTML(ads[S.ad % ads.length]) + '</div>' +
         (ads.length > 1 ? '<div class="dots" id="dots" aria-hidden="true">' + ads.map((a, i) => '<i' + (i === S.ad % ads.length ? ' class="on"' : '') + '></i>').join('') + '</div>' : '') + '</div>' : '') +
       ('<button class="mini" data-act="loyalty">' + SV(I.card).replace('<svg ', '<svg width="34" height="34" style="color:#D91219;flex-shrink:0" ') +
-        '<span class="grow" style="display:flex;flex-direction:column;gap:6px"><span>بطاقة الوفاء · ' + have + ' / ' + total + '</span><span class="pips">' + pips + '</span></span></button>') +
+        '<span class="grow" style="display:flex;flex-direction:column;gap:6px"><span>بطاقة الوفاء · ' + have + ' / ' + total + (S.rewards ? ' · لديك هدية 🎁' : '') + '</span><span class="pips">' + pips + '</span></span></button>') +
       '<h2>الأقسام</h2><div class="grid">' +
       S.cat.sections.map(s => '<button class="tile" data-act="sec" data-v="' + esc(s) + '">' + icon(s) + '<span>' + esc(s) + '</span></button>').join('') + '</div>';
   },
@@ -330,9 +371,9 @@ const V = {
         const ctl = !p.avail ? '<span class="tag">غير متوفر</span>' :
           q ? '<div class="qty"><button class="b-line" data-act="dec" data-v="' + esc(p.id) + '" aria-label="إنقاص">−</button><strong>' + q + '</strong><button class="b-red" data-act="inc" data-v="' + esc(p.id) + '" aria-label="زيادة">+</button></div>' :
           '<button class="b-red" style="width:auto" data-act="inc" data-v="' + esc(p.id) + '">أضف للسلة</button>';
-        const ok = /^[\w.-]+\.(jpg|jpeg|png|webp)$/i.test(p.img || '');
+        const ok = hasImg(p.img);
         return '<div class="card"><div class="row" style="align-items:flex-start;gap:14px">' +
-          (ok ? '<button class="coverbtn" data-act="zoom" data-v="' + esc(p.img) + '" aria-label="تكبير صورة الغلاف"><img class="cover" src="' + esc(p.img) + '" alt="" loading="lazy"></button>' : '') +
+          (ok ? '<button class="coverbtn" data-act="zoom" data-v="' + esc(p.img) + '" aria-label="تكبير الصورة">' + imgTag(p.img, 'cover') + '</button>' : '') +
           '<div class="grow" style="display:flex;flex-direction:column;gap:8px;align-items:flex-start"><p style="font-size:17px;font-weight:800">' + esc(p.name) + '</p><p class="price">' + money(p.price) + '</p>' + ctl + '</div></div></div>';
       }).join('');
     }
@@ -362,9 +403,13 @@ const V = {
       '<button class="' + (co.pay === 'online' ? 'b-on' : 'b-line') + '" data-act="pay" data-v="online">دفع إلكتروني</button></div>' +
       (co.pay === 'online' ? '<p class="hint">يظهر لك رقم التحويل بعد قبول المكتبة للطلب.</p>' : '') +
       '<div class="field"><label for="f-note">ملاحظة (اختياري)</label><textarea id="f-note" rows="2">' + esc(co.note) + '</textarea></div>' +
+      (S.rewards > 0 ? '<div class="field"><label>هدية بطاقة الوفاء 🎁</label><span class="hint">اختر مادة من سلتك تصبح مجانية' + (Number(S.cat.settings.rewardMax) ? ' (حتى ' + money(S.cat.settings.rewardMax) + ')' : '') + '. تدفع فقط رسوم الخدمة والتوصيل.</span>' +
+        '<div style="display:flex;flex-direction:column;gap:8px">' + cartLines().map(l => '<button class="' + (String(S.reward) === String(l.p.id) ? 'b-on' : 'b-line') + '" data-act="gift" data-v="' + esc(l.p.id) + '">' + esc(l.p.name) + ' — ' + money(l.p.price) + '</button>').join('') +
+        (S.reward ? '<button class="b-line" data-act="gift" data-v="">لا أريد الهدية الآن</button>' : '') + '</div></div>' : '') +
       '<div class="field"><label for="f-promo">كود الخصم (إن وُجد)</label><div class="promo"><input id="f-promo" autocomplete="off" dir="ltr" value="' + esc(S.promo.code) + '" placeholder="CODE">' +
       '<button class="b-black" data-act="promo">' + (S.promo.discount ? 'تم ✓' : 'تطبيق') + '</button></div></div></div>' +
       '<div class="card"><div class="line"><span>المنتجات</span><span>' + money(c.subtotal) + '</span></div>' +
+      (c.free ? '<div class="line price"><span>هدية الوفاء (' + esc(c.freeName) + ')</span><span>− ' + money(c.free) + '</span></div>' : '') +
       (c.discount ? '<div class="line price"><span>الخصم (' + esc(S.promo.code) + ')</span><span>− ' + money(c.discount) + '</span></div>' : '') +
       '<div class="line"><span>رسوم الخدمة</span><span>' + money(c.fee) + '</span></div>' +
       (co.mode === 'delivery' ? '<div class="line"><span>التوصيل</span><span>' + (co.area ? money(c.delivery) : 'اختر المنطقة') + '</span></div>' : '') +
@@ -387,8 +432,9 @@ const V = {
     return head('بطاقة الوفاء', 'home') + msg() + '<div class="card"><div class="row"><img class="logo" src="' + LOGO + '" alt="" width="48" height="48">' +
       '<div class="grow"><p style="font-weight:800">' + esc(S.user.name) + '</p><p class="hint">' + (S.user.type === 'student' ? 'طالب' + (S.user.stage ? ' · ' + esc(S.user.stage) : '') : 'زبون') + ' · بطاقة الوفاء</p></div><strong class="price">' + have + ' / ' + total + '</strong></div>' +
       '<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px">' + g + '</div>' +
-      '<p style="font-weight:700">كل ملزمة تستلمها = ختم (الملازم فقط). عند اكتمال البطاقة: ' + esc(S.cat.settings.reward) + '</p>' +
-      (done ? '<p class="msg">بطاقات مكتملة: ' + done + '</p>' : '') + '</div>';
+      '<p style="font-weight:700">كل ملزمة تستلمها = ختم (الملازم فقط). عند اكتمال البطاقة تحصل على هدية: مادة مجانية من اختيارك' + (Number(S.cat.settings.rewardMax) ? ' (حتى ' + money(S.cat.settings.rewardMax) + ')' : '') + '، تدفع فقط رسوم الخدمة والتوصيل.</p>' +
+      (S.rewards ? '<p class="msg">لديك ' + (S.rewards > 1 ? S.rewards + ' هدايا' : 'هدية') + ' 🎁 أضف المادة التي تريدها إلى السلة، واخترها كهدية في صفحة تأكيد الطلب.</p>' : '') +
+      (done ? '<p class="hint">بطاقات مكتملة: ' + done + '</p>' : '') + '</div>';
   }
 };
 function render() {
@@ -396,6 +442,7 @@ function render() {
   app.className = S.anim ? 'enter' : '';
   app.innerHTML = V[S.view]();
   document.getElementById('layer').innerHTML = S.drawer && S.user ? drawerHTML() : '';
+  hydrate();
   if (S.anim) window.scrollTo(0, 0);
   S.anim = false;
 }
@@ -410,7 +457,7 @@ function syncCo() {
 }
 function loadStatus(view) {
   api('status', auth()).then(r => {
-    if (r.ok) { S.orders = r.orders || []; S.stamps = r.stamps || 0; } else S.msg = r.error || 'تعذر التحميل';
+    if (r.ok) gotStatus(r); else S.msg = r.error || 'تعذر التحميل';
     S.view = view; S.anim = true; S.drawer = false; render();
   });
 }
@@ -433,49 +480,47 @@ const ACT = {
   },
   home() { go('home'); },
   regType(d) {
-    const ids = ['f-code', 'f-phone', 'f-name', 'f-pass'];
+    const ids = ['f-phone', 'f-name'];
     const keep = ids.map(i => document.getElementById(i).value);
     S.regType = d.v; render();
     ids.forEach((i, k) => { document.getElementById(i).value = keep[k]; });
   },
   register() {
     const val = i => { const e = document.getElementById(i); return e ? e.value.trim() : ''; };
-    const d = { code: val('f-code'), phone: val('f-phone'), name: val('f-name'), type: S.regType, stage: val('f-stage'), password: document.getElementById('f-pass').value };
+    const d = { phone: val('f-phone').replace(/\s/g, ''), name: val('f-name'), type: S.regType, stage: val('f-stage') };
     let err = '';
-    if (!d.code) err = 'اكتب كود التسجيل';
-    else if (!/^07\d{9}$/.test(d.phone)) err = 'رقم الهاتف يجب أن يكون ١١ رقماً يبدأ بـ 07';
+    if (!/^07\d{9}$/.test(d.phone)) err = 'رقم الهاتف يجب أن يكون ١١ رقماً يبدأ بـ 07';
     else if (!d.name) err = 'اكتب اسمك';
-    else if (d.password.length < 4) err = 'كلمة السر من ٤ رموز على الأقل';
     else if (d.type === 'student' && !d.stage) err = 'اختر مرحلتك';
     if (err) { S.msg = err; render(); return; }
     S.busy = true; S.msg = ''; render();
     api('register', d).then(r => {
       S.busy = false;
       if (!r.ok) { S.msg = r.error || 'تعذر التسجيل'; render(); return; }
-      S.user = { phone: d.phone, name: d.name, type: d.type, stage: d.stage, token: r.token };
-      store.set('rw_user', S.user); go('home'); refreshStatus();
+      S.user = { phone: d.phone, name: d.name, type: d.type, stage: d.stage, token: r.token, code: r.code || '' };
+      S.newCode = r.code || ''; store.set('rw_user', S.user); go(S.newCode ? 'welcome' : 'home'); refreshStatus();
     });
   },
   zoom(d) {
     const z = document.createElement('button'); z.id = 'zoom'; z.setAttribute('aria-label', 'إغلاق الصورة');
-    const im = document.createElement('img'); im.src = d.v; im.alt = 'صورة الغلاف';
+    const im = document.createElement('img'); im.src = isUp(d.v) ? (IMGS[d.v] || '') : d.v; im.alt = 'صورة المنتج';
     const t = document.createElement('span'); t.textContent = 'اضغط للإغلاق';
     z.appendChild(im); z.appendChild(t); z.onclick = () => z.remove(); document.body.appendChild(z);
   },
   toLogin() { go('login'); },
   toRegister() { go('register'); },
   login() {
-    const phone = document.getElementById('l-phone').value.trim(), password = document.getElementById('l-pass').value;
-    if (!/^07\d{9}$/.test(phone) || !password) { S.msg = 'اكتب رقم الهاتف وكلمة السر'; render(); return; }
+    const phone = document.getElementById('l-phone').value.replace(/\s/g, ''), code = document.getElementById('l-code').value.trim();
+    if (!/^07\d{9}$/.test(phone) || !code) { S.msg = 'اكتب رقم الهاتف ورقم الحساب'; render(); return; }
     S.busy = true; S.msg = ''; render();
-    api('login', { phone, password }).then(r => {
+    api('login', { phone, code }).then(r => {
       S.busy = false;
       if (!r.ok) { S.msg = r.error || 'تعذر الدخول'; render(); return; }
-      S.user = { phone, name: r.name, type: r.type, stage: r.stage, token: r.token };
+      S.user = { phone, name: r.name, type: r.type, stage: r.stage, token: r.token, code: r.code || '' };
       store.set('rw_user', S.user); go('home'); refreshStatus();
     });
   },
-  logout() { S.user = null; S.stamps = 0; S.orders = []; S.cart = {}; try { localStorage.removeItem('rw_user'); localStorage.removeItem('rw_cart'); } catch (e) {} go('login'); },
+  logout() { S.user = null; S.stamps = 0; S.rewards = 0; S.reward = ''; S.orders = []; S.cart = {}; try { localStorage.removeItem('rw_user'); localStorage.removeItem('rw_cart'); } catch (e) {} go('login'); },
   sec(d) { S.sec = d.v; S.path = []; go('browse'); },
   grp(d) { S.path.push(d.v); go('browse'); },
   back() { if (S.path.length) { S.path.pop(); go('browse'); } else go('home'); },
@@ -485,6 +530,7 @@ const ACT = {
   checkout() { go('checkout'); },
   mode(d) { syncCo(); S.co.mode = d.v; render(); },
   pay(d) { syncCo(); S.co.pay = d.v; render(); },
+  gift(d) { syncCo(); S.reward = d.v; S.promo.discount = 0; render(); },
   locate() {
     syncCo();
     const fail = t => { S.locating = false; S.msg = t; render(); };
@@ -507,10 +553,10 @@ const ACT = {
     if (co.mode === 'delivery' && !co.lat) { S.msg = 'يجب تحديد موقعك أولاً لإرسال طلب التوصيل. اضغط زر "حدّد موقعي".'; render(); return; }
     S.busy = true; S.msg = ''; render();
     const items = cartLines().map(l => ({ id: l.p.id, qty: l.q }));
-    api('order', Object.assign({ items, mode: co.mode, area: co.area, pay: co.pay, lat: co.lat, lng: co.lng, promo: S.promo.discount ? S.promo.code : '', note: (co.mode === 'delivery' && co.addr.trim() ? 'العنوان: ' + co.addr.trim() + (co.note ? ' | ' : '') : '') + co.note }, auth())).then(r => {
+    api('order', Object.assign({ items, mode: co.mode, area: co.area, pay: co.pay, lat: co.lat, lng: co.lng, reward: calc().free ? S.reward : '', promo: S.promo.discount ? S.promo.code : '', note: (co.mode === 'delivery' && co.addr.trim() ? 'العنوان: ' + co.addr.trim() + (co.note ? ' | ' : '') : '') + co.note }, auth())).then(r => {
       S.busy = false;
       if (!r.ok) { S.msg = r.error || 'تعذر إرسال الطلب'; render(); return; }
-      S.cart = {}; saveCart(); S.co.note = ''; S.promo = { code: '', discount: 0 };
+      S.cart = {}; saveCart(); S.co.note = ''; S.promo = { code: '', discount: 0 }; S.reward = '';
       loadStatus('orders');
     });
   },
@@ -537,7 +583,7 @@ document.addEventListener('change', e => {
 setInterval(() => {
   const el = document.getElementById('ad');
   if (el && S.cat && S.cat.ads.length > 1) {
-    S.ad++; const k = S.ad % S.cat.ads.length; el.textContent = S.cat.ads[k]; el.classList.remove('adin'); void el.offsetWidth; el.classList.add('adin');
+    S.ad++; const k = S.ad % S.cat.ads.length; el.innerHTML = adHTML(S.cat.ads[k]); hydrate(); el.classList.remove('adin'); void el.offsetWidth; el.classList.add('adin');
     const ds = document.querySelectorAll('#dots i'); ds.forEach((d, i) => d.classList.toggle('on', i === k));
   }
 }, 4000);
