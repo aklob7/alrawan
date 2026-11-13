@@ -1,6 +1,6 @@
 // مكتبة الروان — يجعل الواجهة تفتح حتى مع ضعف الإنترنت. الطلبات نفسها تحتاج اتصالاً دائماً.
-const CACHE = 'rawan-v11';
-const SHELL = ['./', 'index.html', 'config.js', 'manifest.json', 'icon-192.png', 'icon-512.png', 'splash.jpg', 'apple-touch-icon.png'];
+const CACHE = 'rawan-v12';
+const SHELL = ['./', 'index.html', 'config.js', 'manifest.json', 'icon2-192.png', 'icon2-512.png', 'splash.jpg', 'apple-touch-icon2.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
