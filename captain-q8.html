@@ -79,7 +79,7 @@ function loginView() {
     '<div><label for="c-phone">رقم الهاتف</label><input id="c-phone" type="tel" inputmode="numeric" dir="ltr" autocomplete="username" placeholder="07XXXXXXXXX"></div>' +
     '<div><label for="c-pw">كلمة السر</label><input id="c-pw" type="password" autocomplete="current-password"></div>' +
     msg() + '<button class="red" data-act="login"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الدخول…' : 'دخول') + '</button>' +
-    '<p class="hint">رقمك وكلمة سرك تحصل عليهما من مكتبة الروان.</p></div>';
+    '<p class="hint">رقمك وكلمة سرك تحصل عليهما من مكتبة الروان. صاحب المكتبة: اترك الرقم فارغاً واكتب رمزك.</p></div>';
 }
 function availCard(o) {
   return '<div class="card hot"><div class="top"><b>' + esc(o.no) + '</b><span class="hint">' + tm(o.date) + '</span><span class="tag">' + esc(o.area || 'توصيل') + '</span></div>' +
@@ -152,7 +152,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && S.
 const ACT = {
   login() {
     const phone = $('c-phone').value.replace(/\s/g, ''), password = $('c-pw').value;
-    if (!/^07\d{9}$/.test(phone) || !password) { say('اكتب رقم الهاتف وكلمة السر'); render(); return; }
+    if (!password || (phone && !/^07\d{9}$/.test(phone)) || (!phone && password.length < 4)) { say('اكتب رقم الهاتف وكلمة السر'); render(); return; }
     S.busy = true; say(''); render();
     api('cap_login', { phone, password }).then(r => {
       S.busy = false;

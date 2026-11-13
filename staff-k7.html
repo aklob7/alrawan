@@ -139,17 +139,17 @@ const stagedSec = s => S.d && S.d.sections.some(x => x.name === s && x.staged);
 const V = {
   login() {
     $('ttl').textContent = 'لوحة الروان';
-    if (S.setup) return '<div class="card"><h2>ضبط كلمة سر صاحب المكتبة</h2>' +
-      '<p class="hint">١) اضغط "أرسل الرمز" فيصلك رمز من ٦ أرقام على بوت تيليغرام المكتبة.<br>٢) اكتب الرمز وكلمة سر جديدة (٦ رموز أو أكثر).</p>' +
+    if (S.setup) return '<div class="card"><h2>رمز صاحب المكتبة</h2>' +
+      '<p class="hint">١) اضغط "أرسل الرمز" فيصلك رمز من ٦ أرقام على بوت تيليغرام المكتبة.<br>٢) اكتب رمز التفعيل، ثم رمز الدخول الخاص بك (٤ أرقام أو أكثر). هذا الرمز يفتح لك كل التطبيقات: اللوحة والطلبات والحسابات والكابتن.</p>' +
       '<button class="black" data-act="sendCode"' + (S.busy ? ' disabled' : '') + '>أرسل الرمز إلى تيليغرام</button>' +
       '<div><label for="a-code">الرمز</label><input id="a-code" inputmode="numeric" dir="ltr" autocomplete="one-time-code"></div>' +
-      '<div><label for="a-new">كلمة السر الجديدة</label><input id="a-new" type="password" autocomplete="new-password"></div>' +
+      '<div><label for="a-new">رمز الدخول الجديد لصاحب المكتبة</label><input id="a-new" type="password" autocomplete="new-password"></div>' +
       msg() + '<button class="red" data-act="create"' + (S.busy ? ' disabled' : '') + '>حفظ والدخول</button>' +
       '<button data-act="setup" data-v="0">رجوع</button></div>';
     return '<div class="card"><h2>دخول</h2>' +
-      '<div><label for="a-pass">رمز الموظف أو كلمة سر صاحب المكتبة</label><input id="a-pass" type="password" autocomplete="current-password"></div>' +
+      '<div><label for="a-pass">رمزك (صاحب المكتبة أو الموظف)</label><input id="a-pass" type="password" autocomplete="current-password"></div>' +
       msg() + '<button class="red" data-act="login"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الدخول…' : 'دخول') + '</button>' +
-      '<button data-act="setup" data-v="1">صاحب المكتبة: أول مرة أو نسيت كلمة السر</button></div>';
+      '<button data-act="setup" data-v="1">صاحب المكتبة: تغيير رمزك أو نسيته</button></div>';
   },
   loading() { return '<div class="card"><p style="font-weight:800">جارِ التحميل…</p></div>'; },
   main() {
@@ -254,15 +254,16 @@ const V = {
   staff() {
     if (!S.staffs) return '<div class="card"><p style="font-weight:800">جارِ التحميل…</p></div>';
     const T = { 'موظف': 'موظف: المنتجات والطلبات', 'محاسب': 'محاسب: حسابات الروان فقط' };
-    return '<p class="hint">لكل موظف اسم ورمز خاص. يكتب الموظف رمزه في شاشة الدخول فتفتح له اللوحة وتطبيق الطلبات، ويُسجَّل اسمه على كل طلب يقبله أو يرفضه. المحاسب يدخل برمزه إلى تطبيق حسابات الروان فقط.</p>' +
+    return '<p class="hint">لكل موظف اسم ورمز خاص. يكتب الموظف رمزه في شاشة الدخول فتفتح له اللوحة وتطبيق الطلبات. كل إضافة أو تعديل أو حذف أو نشر أو تغيير حالة طلب يُحفظ باسمه في "سجل التعديلات" داخل تطبيق حسابات الروان. المحاسب يدخل برمزه إلى الحسابات فقط.</p>' +
       (S.stNew ? '<div class="card"><h2>موظف جديد</h2>' +
         '<div><label for="w-name">الاسم</label><input id="w-name"></div>' +
+        '<div><label for="w-phone">رقم الهاتف (اختياري)</label><input id="w-phone" inputmode="tel" dir="ltr" placeholder="07XXXXXXXXX"></div>' +
         '<div><label for="w-type">العمل</label><select id="w-type"><option value="موظف">موظف (المنتجات والطلبات)</option><option value="محاسب">محاسب (الحسابات فقط)</option></select></div>' +
         '<div><label for="w-code">الرمز (٤ أرقام أو أكثر)</label><input id="w-code" inputmode="numeric" dir="ltr" autocomplete="off"></div>' +
         '<button class="red" data-act="stAdd"' + (S.busy ? ' disabled' : '') + '>حفظ الموظف</button><button data-act="stNew" data-v="0">إلغاء</button></div>'
         : '<button class="red" data-act="stNew" data-v="1">+ إضافة موظف</button>') +
       (S.staffs.length ? S.staffs.map(w => '<div class="ord"><div class="top"><b style="flex:1">' + esc(w.name) + '</b><span class="tag ' + (w.active ? 'g' : '') + '">' + (w.active ? 'فعّال' : 'موقوف') + '</span></div>' +
-        '<p class="hint">' + T[w.type] + '</p>' +
+        '<div class="ln"><span class="hint">' + T[w.type] + '</span>' + (w.phone ? '<a href="tel:' + esc(w.phone) + '" dir="ltr">' + esc(w.phone) + '</a>' : '') + '</div>' +
         (S.stCode === w.id ? '<div><label for="w-ncode">الرمز الجديد</label><input id="w-ncode" inputmode="numeric" dir="ltr" autocomplete="off"></div><div class="btns"><button class="red" data-act="stCodeSave" data-v="' + esc(w.id) + '">حفظ</button><button data-act="stCode" data-v="">إلغاء</button></div>'
           : '<div class="btns"><button data-act="stToggle" data-v="' + esc(w.id) + '">' + (w.active ? 'إيقاف' : 'تفعيل') + '</button><button data-act="stCode" data-v="' + esc(w.id) + '">تغيير الرمز</button></div>') + '</div>').join('')
         : '<div class="card"><p>لا يوجد موظفون بعد.</p></div>') +
@@ -351,7 +352,7 @@ const ACT = {
   },
   create() {
     const code = val('a-code'), password = $('a-new').value;
-    if (!code || password.length < 6) { say('اكتب الرمز وكلمة سر من ٦ رموز على الأقل'); render(); return; }
+    if (!code || password.length < 4) { say('اكتب رمز التفعيل ورمز دخول من ٤ أرقام أو أكثر'); render(); return; }
     S.busy = true; say(''); render();
     api('admin_login', { create: true, code, password }).then(done);
   },
@@ -454,9 +455,10 @@ const ACT = {
   stNew(d) { S.stNew = d.v === '1'; say(''); render(); if (S.stNew) $('w-name').focus(); },
   stCode(d) { S.stCode = d.v; say(''); render(); if (d.v) $('w-ncode').focus(); },
   stAdd() {
-    const name = val('w-name'), code = val('w-code'), type = $('w-type').value;
+    const name = val('w-name'), phone = val('w-phone').replace(/\s/g, ''), code = val('w-code'), type = $('w-type').value;
     if (!name || code.length < 4) { say('اكتب الاسم ورمزاً من ٤ أرقام أو أكثر'); render(); return; }
-    stSave({ name, code, type }, 'تم إضافة ' + name + ' ✓ أعطه رمزه.');
+    if (phone && !/^07\d{9}$/.test(phone)) { say('رقم الهاتف يجب أن يكون 07XXXXXXXXX'); render(); return; }
+    stSave({ name, phone, code, type }, 'تم إضافة ' + name + ' ✓ أعطه رمزه.');
   },
   stToggle(d) { const w = S.staffs.find(x => x.id === d.v); if (w) stSave({ id: w.id, name: w.name, type: w.type, active: !w.active }, w.active ? 'تم إيقاف ' + w.name + ' وخروجه.' : 'تم تفعيل ' + w.name + '.'); },
   stCodeSave(d) {

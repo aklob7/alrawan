@@ -27,6 +27,9 @@ label{font-weight:800;display:block;margin-bottom:4px;font-size:14px}
 input{font:inherit;width:100%;min-height:48px;padding:8px 12px;border:2px solid #bbb;border-radius:12px;background:#fff;color:var(--ink)}
 input:focus,button:focus-visible{outline:3px solid var(--g2);outline-offset:2px}
 .card{background:#fff;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.views{display:grid;grid-template-columns:1fr 1fr;gap:6px}.views button{min-height:44px}.views .on{background:var(--g);color:#fff}
+.lg{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-bottom:1px solid var(--line)}.lg:last-child{border-bottom:none}.lg .h{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted)}
+select{font:inherit;width:100%;min-height:44px;padding:6px 10px;border:2px solid #bbb;border-radius:12px;background:#fff}
 .chips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .chips button{min-height:42px;font-size:14px;padding:4px}
 .chips .on{background:var(--g);color:#fff}
@@ -92,7 +95,7 @@ function periods() {
     last: [pY + '-' + pad(pM) + '-01', pY + '-' + pad(pM) + '-' + pad(lastDay(pY, pM))]
   };
 }
-const S = { auth: store.get('rw_acc', null), per: 'today', from: '', to: '', r: null, msg: '', busy: false };
+const S = { auth: store.get('rw_acc', null), per: 'today', from: '', to: '', r: null, msg: '', busy: false, view: 'sales', log: null, who: '' };
 
 function api(action, data) {
   if (!API) return Promise.resolve({ ok: false, error: 'رابط الخادم غير موجود' });
@@ -103,7 +106,7 @@ function api(action, data) {
 function msg() { return S.msg ? '<p class="msg" role="alert">' + esc(S.msg) + '</p>' : ''; }
 
 function loginView() {
-  return '<div class="card"><h2>دخول المحاسب</h2><p class="hint">اكتب رمز المحاسب أو كلمة سر صاحب المكتبة.</p>' +
+  return '<div class="card"><h2>دخول المحاسب</h2><p class="hint">اكتب رمزك (المحاسب أو صاحب المكتبة).</p>' +
     '<div><label for="pw">الرمز أو كلمة السر</label><input id="pw" type="password" autocomplete="current-password"></div>' +
     msg() + '<button class="prime" data-act="login"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الدخول…' : 'دخول') + '</button></div>';
 }
@@ -148,12 +151,32 @@ function reportView() {
   h += '<button class="prime" data-act="csv"' + (r.rows.length ? '' : ' disabled') + '>⬇ تنزيل كل طلبات الفترة (Excel)</button>';
   return h;
 }
+function logView() {
+  if (!S.log) return '<div class="card"><p style="font-weight:800">' + (S.busy ? 'جارِ تحميل السجل…' : '') + '</p></div>';
+  const names = [...new Set(S.log.map(x => x.name))];
+  const list = S.log.filter(x => !S.who || x.name === S.who);
+  const count = {}; S.log.forEach(x => { count[x.name] = (count[x.name] || 0) + 1; });
+  return '<div class="card"><h2>من قام بماذا</h2><p class="hint">كل إضافة أو تعديل أو حذف منتج، ونشر الإعلانات والفروع، وتغيير حالات الطلبات، وإضافة الموظفين والكباتن، مع الاسم والوقت.</p>' +
+    '<div class="stats">' + names.slice(0, 8).map(n => '<div class="stat"><b>' + num(count[n]) + '</b><span>' + esc(n) + '</span></div>').join('') + '</div>' +
+    '<div><label for="who">عرض عمليات</label><select id="who" data-change="who"><option value="">الكل (' + S.log.length + ')</option>' + names.map(n => '<option' + (S.who === n ? ' selected' : '') + '>' + esc(n) + '</option>').join('') + '</select></div></div>' +
+    '<div class="card">' + (list.length ? list.map(x => '<div class="lg"><div class="h"><span><b style="color:var(--ink)">' + esc(x.name) + '</b>' + (x.role ? ' · ' + esc(x.role) : '') + '</span><span dir="ltr">' + esc(x.time) + '</span></div>' +
+      '<div><b>' + esc(x.action) + '</b>' + (x.detail ? ' — ' + esc(x.detail) : '') + '</div></div>').join('') : '<p class="hint">لا توجد عمليات في هذه الفترة.</p>') + '</div>';
+}
 function render() {
-  $('app').innerHTML = !S.auth ? loginView() : periodView() + msg() + reportView();
+  const views = '<div class="views"><button class="' + (S.view === 'sales' ? 'on' : '') + '" data-act="view" data-v="sales">المبيعات</button><button class="' + (S.view === 'log' ? 'on' : '') + '" data-act="view" data-v="log">سجل التعديلات</button></div>';
+  $('app').innerHTML = !S.auth ? loginView() : views + periodView() + msg() + (S.view === 'log' ? logView() : reportView());
   $('hbtn').innerHTML = S.auth ? (S.auth.name ? '<span style="font-size:14px;font-weight:700">' + esc(S.auth.name) + '</span> ' : '') + '<button data-act="logout">خروج</button>' : '';
 }
 function load() {
   S.busy = true; S.msg = ''; render();
+  if (S.view === 'log') {
+    api('acc_log', { from: S.from, to: S.to }).then(r => {
+      S.busy = false;
+      if (!r.ok) { S.msg = r.error || 'تعذر تحميل السجل'; render(); return; }
+      S.log = r.items; if (S.who && !S.log.some(x => x.name === S.who)) S.who = ''; render();
+    });
+    return;
+  }
   api('acc_report', { from: S.from, to: S.to }).then(r => {
     S.busy = false;
     if (!r.ok) { S.msg = r.error || 'تعذر حساب التقرير'; render(); return; }
@@ -189,8 +212,10 @@ const ACT = {
     if (!f || !t || f > t) { S.msg = 'اختر تاريخ البداية ثم النهاية'; render(); return; }
     S.per = ''; S.from = f; S.to = t; load();
   },
-  csv() { if (S.r) csv(); }
+  csv() { if (S.r) csv(); },
+  view(d) { S.view = d.v; S.msg = ''; load(); }
 };
+document.addEventListener('change', e => { if (e.target.dataset.change === 'who') { S.who = e.target.value; render(); } });
 document.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && ACT[b.dataset.act] && !b.disabled) ACT[b.dataset.act](b.dataset); });
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'pw') ACT.login(); });
 render();

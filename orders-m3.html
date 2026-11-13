@@ -122,7 +122,7 @@ function card(o) {
     (o.reason ? '<p class="msg">السبب: ' + esc(o.reason) + '</p>' : '') + b + '</div>';
 }
 function loginView() {
-  return '<div class="card"><h2>دخول المكتبة</h2><p class="hint">اكتب رمزك (الموظف) أو كلمة سر صاحب المكتبة.</p>' +
+  return '<div class="card"><h2>دخول المكتبة</h2><p class="hint">اكتب رمزك (صاحب المكتبة أو الموظف).</p>' +
     '<div><label for="pw">الرمز أو كلمة السر</label><input id="pw" type="password" autocomplete="current-password"></div>' +
     msg() + '<button class="red" data-act="login"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الدخول…' : 'دخول') + '</button></div>';
 }
