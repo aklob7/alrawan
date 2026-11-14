@@ -54,6 +54,9 @@ h3{font-size:16px;margin-top:4px}
 .msg{padding:10px 12px;border-radius:12px;font-weight:700;background:#fdecec;color:#8a0a0f}
 .msg.good{background:#e6f5ec;color:var(--ok)}
 .hint{color:#555;font-size:14px}
+.pprev{display:flex;gap:10px;align-items:center;background:#F2F2F2;border-radius:14px;padding:10px}
+.pprev img{width:40px;height:40px;border-radius:10px}
+.pprev .t{display:flex;flex-direction:column;font-size:14px}
 .nopr{background:#FFF4D6;border:2px solid #E0A800;color:#5A4300;font-weight:800;text-align:right;min-height:46px}
 .np{color:#B26A00;font-size:13px;white-space:nowrap}
 .item{display:flex;align-items:center;gap:12px;padding:10px;border:2px solid var(--line);border-radius:14px;background:#fff;text-align:right;min-height:72px}
@@ -170,11 +173,11 @@ const V = {
   main() {
     const own = S.d.role === 'owner';
     $('ttl').textContent = 'لوحة الروان · ' + (own ? 'صاحب المكتبة' : (S.auth && S.auth.name) || 'الموظف');
-    const list = own ? [['items', 'المنتجات'], ['custs', 'الزبائن'], ['ads', 'الإعلانات'], ['branches', 'الفروع'], ['caps', 'الكباتن'], ['staff', 'الموظفون'], ['apps', 'التطبيقات']] : [['items', 'المنتجات'], ['custs', 'الزبائن'], ['apps', 'التطبيقات']];
+    const list = own ? [['items', 'المنتجات'], ['custs', 'الزبائن'], ['ads', 'الإعلانات'], ['branches', 'الفروع'], ['caps', 'الكباتن'], ['staff', 'الموظفون'], ['push', 'الإشعارات'], ['apps', 'التطبيقات']] : [['items', 'المنتجات'], ['custs', 'الزبائن'], ['apps', 'التطبيقات']];
     const nNew = (S.orders || []).filter(o => o.status === 'جديد' || o.status === 'مؤجل').length;
     const tabs = '<div class="tabs' + (own ? ' four' : '') + '">' + list.map(t =>
       '<button class="' + (S.tab === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '">' + t[1] + (t[0] === 'orders' && nNew ? ' (' + nNew + ')' : '') + '</button>').join('') + '</div>';
-    return tabs + msg() + (S.tab === 'custs' ? V.custs() : S.tab === 'apps' ? V.apps() : S.tab === 'orders' ? V.orders() : S.tab === 'ads' && own ? V.ads() : S.tab === 'branches' && own ? V.branches() : S.tab === 'caps' && own ? V.caps() : S.tab === 'staff' && own ? V.staff() : V.items());
+    return tabs + msg() + (S.tab === 'push' && own ? V.push() : S.tab === 'custs' ? V.custs() : S.tab === 'apps' ? V.apps() : S.tab === 'orders' ? V.orders() : S.tab === 'ads' && own ? V.ads() : S.tab === 'branches' && own ? V.branches() : S.tab === 'caps' && own ? V.caps() : S.tab === 'staff' && own ? V.staff() : V.items());
   },
   orders() {
     if (!S.orders) return '<div class="card"><p style="font-weight:800">جارِ تحميل الطلبات…</p></div>';
@@ -241,6 +244,35 @@ const V = {
       '<h3>طلباته</h3>' + (!os ? '<div class="card"><p>جارِ التحميل…</p></div>' : os.length ? os.map(o => '<div class="ord"><div class="top"><b style="flex:1">' + esc(o.no) + '</b>' + stTag(o.status) + '</div>' +
         '<div class="ln"><span>' + esc(o.date) + '</span><b>' + money(o.total) + '</b></div><div class="it">' + esc(o.items.split('، ').join('\n')) + '</div>' +
         '<div class="ln"><span>' + esc(o.mode) + (o.area ? ' · ' + esc(o.area) : '') + '</span><span>' + esc(o.captain || '') + '</span></div>' + (o.reason ? '<p class="hint">السبب: ' + esc(o.reason) + '</p>' : '') + '</div>').join('') : '<div class="card"><p>لم يطلب بعد.</p></div>');
+  },
+  push() {
+    const P = S.push, pv = S.pv || {};
+    if (!P) return V.loading();
+    const ta = 'style="font:inherit;width:100%;min-height:110px;padding:10px 12px;border:2px solid #bbb;border-radius:12px;direction:ltr;text-align:left;font-size:13px"';
+    if (!P.ready || S.pushEdit) return '<div class="card"><p style="font-weight:800;font-size:18px">ربط إشعارات الهاتف بـ Firebase</p>' +
+      '<p class="hint">مرة واحدة فقط. افتح console.firebase.google.com ← مشروعك ← ⚙️ إعدادات المشروع (Project settings):</p>' +
+      '<p><b>١.</b> تبويب <b>General</b> ← في أسفل الصفحة تطبيق الويب (&lt;/&gt;) ← انسخ كتلة <b dir="ltr">firebaseConfig</b> والصقها هنا:</p>' +
+      '<textarea id="pu-web" ' + ta + ' placeholder="const firebaseConfig = { apiKey: ... }">' + esc(pv.web || '') + '</textarea>' +
+      '<p><b>٢.</b> تبويب <b>Cloud Messaging</b> ← <b>Web Push certificates</b> ← Generate key pair ← انسخ المفتاح (Key pair):</p>' +
+      '<input id="pu-vapid" dir="ltr" placeholder="BExxxxxxxx…" value="' + esc(pv.vapid || '') + '">' +
+      '<p><b>٣.</b> تبويب <b>Service accounts</b> ← Generate new private key ← افتح الملف الذي نزل والصق محتواه كاملاً:</p>' +
+      '<textarea id="pu-sa" ' + ta + ' placeholder="{ &quot;type&quot;: &quot;service_account&quot;, ... }"></textarea>' +
+      '<p class="hint">🔒 الملف الثالث سري: يُحفظ في خادمك فقط ولا يظهر لأي أحد. احذفه من هاتفك بعد اللصق.</p>' +
+      msg() + '<button class="red" data-act="pushCfg"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الفحص…' : 'ربط Firebase') + '</button>' +
+      (P.ready ? '<button data-act="pushEdit" data-v="">رجوع</button>' : '') + '</div>';
+    const n = P.devices;
+    return '<div class="card"><p style="font-weight:800">🔔 إرسال إشعار للزبائن</p>' +
+      '<p class="hint">مربوط بمشروع <b dir="ltr">' + esc(P.project) + '</b> · <b>' + n + '</b> جهاز مشترك بالإشعارات</p>' +
+      '<div><label for="pu-t">العنوان</label><input id="pu-t" maxlength="60" placeholder="مثال: وصلت ملازم السادس الجديدة 📚" value="' + esc(pv.t || '') + '"></div>' +
+      '<div><label for="pu-b">النص</label><textarea id="pu-b" maxlength="240" style="font:inherit;width:100%;min-height:90px;padding:10px 12px;border:2px solid #bbb;border-radius:12px" placeholder="مثال: خصم ١٠٪ على كل القرطاسية حتى الخميس">' + esc(pv.b || '') + '</textarea></div>' +
+      ((pv.t || pv.b) ? '<div class="pprev"><img src="icon2-192.png" alt=""><span class="t"><b>' + esc(pv.t || 'مكتبة الروان') + '</b><span>' + esc(pv.b || '') + '</span></span></div>' : '') +
+      msg() + (S.pushAsk
+        ? '<div class="card" style="border-color:var(--red)"><p style="font-weight:800">سيصل هذا الإشعار إلى ' + n + ' جهاز ولا يمكن سحبه بعد الإرسال. إرسال الآن؟</p>' +
+          '<button class="red" data-act="pushSend"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الإرسال…' : 'نعم، أرسل') + '</button><button data-act="pushNo">لا، تراجع</button></div>'
+        : '<button class="red" data-act="pushAsk"' + (n ? '' : ' disabled') + '>إرسال لكل الزبائن</button>' + (n ? '' : '<p class="hint">لا يوجد مشتركون بعد. يظهر للزبائن زر «تفعيل الإشعارات» في الصفحة الرئيسية.</p>')) + '</div>' +
+      (P.history.length ? '<div class="card"><p style="font-weight:800">آخر الإشعارات</p>' + P.history.map(h =>
+        '<div style="border-top:1px solid #eee;padding-top:8px"><b>' + esc(h.title) + '</b><p>' + esc(h.body) + '</p><p class="hint">' + esc(h.at) + ' · وصل إلى ' + h.sent + ' جهاز · ' + esc(h.by) + '</p></div>').join('') + '</div>' : '') +
+      '<button data-act="pushEdit" data-v="1" style="font-size:14px;min-height:40px">تغيير إعدادات Firebase</button>';
   },
   apps() {
     const u = f => new URL(f, location.href).href;
@@ -432,6 +464,8 @@ function keepForm() {
   if (!S.edit) return;
   ['name', 'price', 'l1', 'l2'].forEach(k => { const e = $('e-' + k); if (e) S.edit[k] = e.value; });
 }
+function keepPush() { const v = S.pv = S.pv || {}; [['web', 'pu-web'], ['vapid', 'pu-vapid'], ['t', 'pu-t'], ['b', 'pu-b']].forEach(k => { const e = $(k[1]); if (e) v[k[0]] = e.value; }); }
+function loadPush() { api('admin_pushinfo').then(r => { if (r.ok) S.push = r; else say(r.error || 'تعذر التحميل'); render(); }); }
 function keepBr() { document.querySelectorAll('[data-b]').forEach(e => { S.branches[+e.dataset.b][e.dataset.f] = e.value; }); }
 function keepAds() { document.querySelectorAll('[data-ad]').forEach(e => { S.ads[+e.dataset.ad].text = e.value; }); document.querySelectorAll('[data-adl]').forEach(e => { S.ads[+e.dataset.adl].link = e.value; }); }
 
@@ -480,7 +514,7 @@ const ACT = {
     api('admin_login', { password }).then(done);
   },
   logout() { S.auth = null; store.set('rw_admin', null); S.d = null; S.view = 'login'; S.setup = false; say(''); render(); },
-  tab(d) { if (S.tab === 'ads') keepAds(); if (S.tab === 'branches') keepBr(); if (d.v === 'orders') loadOrders(true); if (d.v === 'caps' && !S.caps) loadCaps(); if (d.v === 'staff' && !S.staffs) loadStaffs(); if (d.v === 'custs') { S.cust = null; if (!S.custs) loadCusts(); } document.title = 'لوحة الروان'; S.tab = d.v; say(''); render(); },
+  tab(d) { if (S.tab === 'ads') keepAds(); if (S.tab === 'branches') keepBr(); if (d.v === 'orders') loadOrders(true); if (d.v === 'caps' && !S.caps) loadCaps(); if (d.v === 'staff' && !S.staffs) loadStaffs(); if (d.v === 'custs') { S.cust = null; if (!S.custs) loadCusts(); } if (d.v === 'push') loadPush(); document.title = 'لوحة الروان'; S.tab = d.v; say(''); render(); },
   add() { S.edit = { id: '', sec: S.f, l1: '', l2: '', name: '', price: '', img: '' }; S.imgNew = ''; say(''); openForm(); },
   edit(d) { const p = S.d.products.find(x => x.id === d.v); if (!p) return; S.edit = Object.assign({}, p); S.imgNew = ''; say(''); openForm(); },
   back() { if (history.state && history.state.form) history.back(); else closeForm(); },
@@ -489,6 +523,27 @@ const ACT = {
   addTextAd() { keepAds(); S.ads.unshift({ text: '', img: '', link: '' }); say('اكتب نص الإعلان ثم اضغط "رفع الإعلانات".', true); render(); const f = document.querySelector('[data-ad="0"]'); if (f) f.focus(); },
   delAd(d) { keepAds(); S.ads.splice(+d.v, 1); say('حُذف من القائمة. اضغط "رفع الإعلانات" للحفظ.', true); render(); },
   pf(d) { S.pf = d.v; render(); window.scrollTo(0, 0); },
+  pushEdit(d) { keepPush(); S.pushEdit = !!d.v; say(''); render(); },
+  pushCfg() {
+    keepPush(); const sa = ($('pu-sa') || {}).value || '', v = S.pv;
+    if (!String(v.web || '').trim() || !String(v.vapid || '').trim() || !sa.trim()) return fail('املأ الخانات الثلاث');
+    S.busy = true; say(''); render();
+    api('admin_pushcfg', { web: v.web, vapid: v.vapid, sa }).then(r => {
+      S.busy = false;
+      if (!r.ok) { say(r.error || 'تعذر الربط'); render(); return; }
+      S.pushEdit = false; S.pv.web = ''; S.pv.vapid = ''; say('تم ربط Firebase ✓ يظهر الآن للزبائن زر تفعيل الإشعارات.', true); loadPush();
+    });
+  },
+  pushAsk() { keepPush(); const v = S.pv; if (!String(v.t || '').trim() || !String(v.b || '').trim()) return fail('اكتب العنوان والنص'); S.pushAsk = true; say(''); render(); },
+  pushNo() { keepPush(); S.pushAsk = false; render(); },
+  pushSend() {
+    keepPush(); S.busy = true; render();
+    api('admin_push', { title: S.pv.t, body: S.pv.b }).then(r => {
+      S.busy = false; S.pushAsk = false;
+      if (!r.ok || r.error) { say(r.error || 'تعذر الإرسال'); render(); return; }
+      S.pv.t = ''; S.pv.b = ''; say('أُرسل ✓ وصل إلى ' + r.sent + ' جهاز' + (r.removed ? ' (حُذف ' + r.removed + ' جهاز لم يعد مشتركاً)' : ''), true); loadPush();
+    });
+  },
   save() {
     keepForm();
     const e = S.edit, price = Number(e.price);
@@ -648,6 +703,9 @@ document.addEventListener('change', e => {
 });
 let qt;
 document.addEventListener('input', e => {
+  if (e.target.id === 'pu-t' || e.target.id === 'pu-b') {
+    const id = e.target.id; clearTimeout(qt); qt = setTimeout(() => { keepPush(); const pos = $(id).selectionStart; render(); const n = $(id); n.focus(); try { n.setSelectionRange(pos, pos); } catch (x) {} }, 400); return;
+  }
   if (e.target.id !== 'f-q' && e.target.id !== 'c-q') return;
   const id = e.target.id;
   clearTimeout(qt); qt = setTimeout(() => {
