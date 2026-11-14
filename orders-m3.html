@@ -6,9 +6,9 @@
 <meta name="theme-color" content="#B50E14">
 <meta name="robots" content="noindex">
 <title>طلبات الروان</title>
-<link rel="manifest" href="orders.webmanifest">
-<link rel="apple-touch-icon" href="apple-touch-icon2.png">
-<link rel="icon" href="icon2-192.png">
+<link rel="manifest" href="orders.webmanifest?v=2">
+<link rel="apple-touch-icon" href="ord-apple.png">
+<link rel="icon" href="ord-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
@@ -122,7 +122,7 @@ function card(o) {
     (o.reason ? '<p class="msg">السبب: ' + esc(o.reason) + '</p>' : '') + b + '</div>';
 }
 function loginView() {
-  return '<div class="card"><h2>دخول المكتبة</h2><p class="hint">اكتب رمزك (صاحب المكتبة أو الموظف).</p>' +
+  return '<img src="ord-512.png" alt="طلبات الروان" width="512" height="512" style="width:min(70vw,240px);height:auto;align-self:center;border-radius:28px;box-shadow:0 14px 30px rgba(0,0,0,.25)">' + '<div class="card"><h2>دخول المكتبة</h2><p class="hint">اكتب رمزك (صاحب المكتبة أو الموظف).</p>' +
     '<div><label for="pw">الرمز أو كلمة السر</label><input id="pw" type="password" autocomplete="current-password"></div>' +
     msg() + '<button class="red" data-act="login"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الدخول…' : 'دخول') + '</button></div>';
 }
