@@ -6,9 +6,9 @@
 <meta name="theme-color" content="#111111">
 <meta name="robots" content="noindex">
 <title>كابتن الروان</title>
-<link rel="manifest" href="captain.webmanifest">
-<link rel="apple-touch-icon" href="apple-touch-icon2.png">
-<link rel="icon" href="icon2-192.png">
+<link rel="manifest" href="captain.webmanifest?v=2">
+<link rel="apple-touch-icon" href="cap-apple.png">
+<link rel="icon" href="cap-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
@@ -75,7 +75,8 @@ const items = s => esc(String(s).split('، ').join('\n'));
 const tm = d => esc(String(d).split(' ')[1] || d);
 
 function loginView() {
-  return '<div class="card"><h2>دخول الكابتن</h2>' +
+  return '<img src="cap-512.png" alt="كابتن الروان" width="512" height="512" style="width:min(70vw,260px);height:auto;align-self:center;border-radius:28px;box-shadow:0 14px 30px rgba(0,0,0,.25)">' +
+    '<div class="card"><h2>دخول الكابتن</h2>' +
     '<div><label for="c-phone">رقم الهاتف</label><input id="c-phone" type="tel" inputmode="numeric" dir="ltr" autocomplete="username" placeholder="07XXXXXXXXX"></div>' +
     '<div><label for="c-pw">كلمة السر</label><input id="c-pw" type="password" autocomplete="current-password"></div>' +
     msg() + '<button class="red" data-act="login"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'جارِ الدخول…' : 'دخول') + '</button>' +
