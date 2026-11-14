@@ -147,6 +147,61 @@ body.hasbar #app{padding-bottom:96px}
 .enter .tile{animation:flipIn .28s cubic-bezier(.2,.9,.3,1.15) both;transform-origin:50% 100%}
 .enter .tile:nth-child(2){animation-delay:.03s}.enter .tile:nth-child(3){animation-delay:.06s}.enter .tile:nth-child(4){animation-delay:.09s}.enter .tile:nth-child(5){animation-delay:.12s}.enter .tile:nth-child(6){animation-delay:.15s}.enter .tile:nth-child(n+7){animation-delay:.18s}
 @media (prefers-reduced-motion:reduce){.spin,.splash,.stamp.new,.enter>*,.enter .tile{animation:none}button,.btn{transition:none}}
+/* ---------- الواجهة الجديدة: شريط نصي، إعلانات تُسحب، رفوف منتجات ---------- */
+.ticker{background:#111;color:#fff;border-radius:12px;overflow:hidden;white-space:nowrap;font-weight:800;font-size:15px;padding:9px 0;box-shadow:0 4px 0 #000}
+.tk-in{display:inline-block;animation:tk var(--tkd,20s) linear infinite}
+.tk-in span{padding:0 18px}
+@keyframes tk{from{transform:translateX(0)}to{transform:translateX(50%)}}
+.adwrap{position:relative;border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 7px 0 #D6D6D6,0 18px 26px rgba(0,0,0,.3)}
+.adrail{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.adrail::-webkit-scrollbar{display:none}
+.adslide{flex:0 0 100%;scroll-snap-align:center;position:relative;padding:0;margin:0;border:none;border-radius:0;min-height:0;background:#fff;box-shadow:none;display:block}
+.adslide:active{transform:none;box-shadow:none}
+.adslide img{width:100%;aspect-ratio:2/1;object-fit:cover;display:block;background:#eee}
+.adslide .adcap{position:absolute;inset-inline:0;bottom:0;padding:22px 12px 24px;background:linear-gradient(transparent,rgba(0,0,0,.72));color:#fff;font-weight:800;font-size:15px;text-align:start}
+.adslide .adgo{position:absolute;top:10px;inset-inline-end:10px;background:var(--red);color:#fff;font-size:13px;font-weight:800;border-radius:20px;padding:5px 11px;box-shadow:0 3px 0 #8A0A10}
+.addots{position:absolute;bottom:8px;left:0;right:0;display:flex;justify-content:center;gap:6px;pointer-events:none}
+.addots i{width:7px;height:7px;border-radius:4px;background:rgba(255,255,255,.65);box-shadow:0 0 0 1px rgba(0,0,0,.25);transition:width .2s}
+.addots i.on{width:20px;background:#fff}
+.secs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.sec{background:linear-gradient(#fff,#F3F3F3);color:#111;border-radius:14px;padding:10px 4px;min-height:78px;font-size:12.5px;font-weight:800;line-height:1.25;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;box-shadow:0 5px 0 #D2D2D2,0 10px 14px rgba(0,0,0,.25)}
+.sec svg{width:28px;height:28px;color:var(--red)}
+.sec:active{transform:translateY(4px);box-shadow:0 1px 0 #D2D2D2}
+.shelf{display:flex;flex-direction:column;gap:8px}
+.shelf-h{display:flex;align-items:center;gap:8px}
+.shelf-h h2{margin:0;flex:1;font-size:18px}
+.shelf-h button{width:auto;min-height:34px;padding:6px 12px;font-size:14px;border-radius:20px}
+.rail{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x proximity;padding:4px 2px 12px;margin:0 -16px;padding-inline:16px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.rail::-webkit-scrollbar{display:none}
+.pc{flex:0 0 132px;scroll-snap-align:start;position:relative;display:flex;flex-direction:column;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 5px 0 #D6D6D6,0 10px 16px rgba(0,0,0,.25)}
+.pc>button.pt{padding:0;margin:0;border:none;border-radius:0;background:#fff;min-height:0;box-shadow:none;display:flex;flex-direction:column;text-align:start;font-weight:700;font-size:13px;width:100%}
+.pc>button.pt:active{transform:scale(.97);box-shadow:none}
+.pc img{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;background:#eee}
+.pc .pn{padding:7px 8px 0;font-size:12.5px;font-weight:800;line-height:1.3;height:40px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.pc .ps{margin:5px 8px 0;font-size:11.5px;font-weight:800;color:#fff;background:#111;border-radius:8px;padding:2px 7px;align-self:flex-start;max-width:calc(100% - 16px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc .pp{padding:5px 8px 9px;font-size:14px;font-weight:900;color:var(--red-d)}
+.pc .pq{position:absolute;top:7px;inset-inline-start:7px;min-width:26px;height:26px;border-radius:13px;background:var(--red);color:#fff;font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center;padding:0 6px;border:2px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.35)}
+.pc .pm{position:absolute;top:7px;inset-inline-end:7px;width:30px;height:30px;min-height:0;border-radius:50%;padding:0;background:#111;color:#fff;font-size:20px;line-height:1;box-shadow:0 3px 8px rgba(0,0,0,.35)}
+.pc .pim{position:relative;display:block}
+.pc .pplus{position:absolute;bottom:7px;inset-inline-end:7px;width:30px;height:30px;border-radius:50%;background:var(--red);color:#fff;font-size:20px;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.35);pointer-events:none}
+.pc.out{opacity:.55}
+.pc.bump{animation:bump .3s ease-out}
+@keyframes bump{40%{transform:scale(1.06)}}
+.newtag{position:absolute;top:7px;inset-inline-end:7px;background:#FFD400;color:#111;font-size:11px;font-weight:900;border-radius:8px;padding:2px 7px;box-shadow:0 2px 0 rgba(0,0,0,.25)}
+#toast{position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));max-width:520px;margin:0 auto;z-index:6;background:#fff;color:#111;border-radius:14px;padding:10px 12px;display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;box-shadow:0 10px 30px rgba(0,0,0,.4);animation:barIn .2s ease-out}
+#toast button{width:auto;min-height:36px;padding:6px 12px;font-size:14px}
+#sheet-bg{position:fixed;inset:0;z-index:8;background:rgba(0,0,0,.6);border:none;border-radius:0;width:100%;min-height:0;padding:0;box-shadow:none;animation:fadeIn .2s both}
+#sheet{position:fixed;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;z-index:9;background:#fff;border-radius:22px 22px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px;max-height:92vh;overflow:auto;animation:sheetIn .25s cubic-bezier(.2,.9,.3,1) both}
+@keyframes sheetIn{from{transform:translateY(100%)}to{transform:none}}
+#sheet img{width:100%;max-height:52vh;object-fit:contain;border-radius:12px;background:#f3f3f3}
+.owlfam .chick{transform-box:fill-box;transform-origin:50% 100%;animation:hop 1.6s ease-in-out infinite}
+.owlfam .chick.c2{animation-delay:.8s;animation-duration:1.9s}
+.owlfam .chick .cw{transform-box:fill-box;transform-origin:50% 0;animation:flap .4s ease-in-out infinite alternate}
+@keyframes hop{0%,55%,100%{transform:translateY(0)}70%{transform:translateY(-7px) rotate(-6deg)}85%{transform:translateY(0) rotate(4deg)}}
+@keyframes flap{to{transform:rotate(18deg)}}
+.owlfam .clids{opacity:0}
+.owl.sleep .chick{animation:none}.owl.sleep .chick .cw{animation:none}.owl.sleep .clids{opacity:1}.owl.sleep .cpup{opacity:0}
+@media (prefers-reduced-motion:reduce){.tk-in,.owlfam .chick,.owlfam .chick .cw,.pc.bump,#sheet,#toast{animation:none}}
 </style>
 </head>
 <body>
@@ -193,6 +248,17 @@ const OWL = w => '<svg class="owl' + (isClosed() ? ' sleep' : '') + '" width="' 
   '<path d="M46 62 L58 62 L52 73 Z" fill="#D91219" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/>' +
   '<path d="M40 105 v5 M46 105 v5 M58 105 v5 M64 105 v5" stroke="#111" stroke-width="3" stroke-linecap="round"/></g>' +
   '<g class="zzz" aria-hidden="true"><text x="78" y="22" font-size="16">Z</text><text x="90" y="8" font-size="12">z</text><text x="99" y="-4" font-size="9">z</text></g></svg>';
+const CHICK = (x, c) => '<g transform="translate(' + x + ',62) scale(1.4)"><g class="chick ' + c + '">' +
+  '<path d="M5 9 L8 1 L12 7 Z M23 9 L20 1 L16 7 Z" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round"/>' +
+  '<ellipse cx="14" cy="20" rx="13" ry="14" fill="#fff" stroke="#111" stroke-width="2.5"/>' +
+  '<path class="cw" d="M2 20 q-3 6 2 10" fill="none" stroke="#111" stroke-width="2.2" stroke-linecap="round"/>' +
+  '<circle cx="9" cy="15" r="5" fill="#fff" stroke="#111" stroke-width="2"/><circle cx="19" cy="15" r="5" fill="#fff" stroke="#111" stroke-width="2"/>' +
+  '<g class="cpup"><circle cx="9.5" cy="15.5" r="2.3" fill="#111"/><circle cx="18.5" cy="15.5" r="2.3" fill="#111"/></g>' +
+  '<g class="clids"><path d="M5 16 q4 3 8 0 M15 16 q4 3 8 0" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round"/></g>' +
+  '<path d="M12 20 L16 20 L14 24 Z" fill="#D91219"/><path d="M10 33 v3 M18 33 v3" stroke="#111" stroke-width="2" stroke-linecap="round"/></g></g>';
+/** البومة مع صغيريها يلعبان حولها (تنام معهم خارج الدوام) */
+const OWLFAM = h => OWL(10).replace(/^<svg class="owl([^"]*)"[^>]*>/, (m, c) => '<svg class="owl owlfam' + c + '" width="' + Math.round(h * 200 / 120) + '" height="' + h + '" viewBox="-46 -8 200 120" role="img" aria-label="بومة الروان وصغارها">')
+  .replace(/<\/svg>$/, CHICK(-44, 'c1') + CHICK(114, 'c2') + '</svg>');
 const I = {
   menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
   history: '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/>',
@@ -349,6 +415,99 @@ function level() {
   return { products: ps };
 }
 
+
+/* ---------- الواجهة: شريط الإعلانات النصية، إعلانات الصور، رفوف المنتجات ---------- */
+const textAds = () => S.cat.ads.map(adOf).filter(a => !hasImg(a.img) && a.text);
+const imgAds = () => S.cat.ads.map(adOf).filter(a => hasImg(a.img));
+function tickerHTML() {
+  const ts = textAds(); if (!ts.length) return '';
+  let items = ts.map(a => a.text); while (items.join('').length < 70) items = items.concat(ts.map(a => a.text));
+  const one = items.map(t => '<span>✦ ' + esc(t) + '</span>').join('');
+  const secs = Math.max(12, Math.round(items.join('').length * 0.22));
+  return '<div class="ticker" role="marquee" aria-label="' + esc(ts.map(a => a.text).join(' — ')) + '"><div class="tk-in" style="--tkd:' + secs + 's" aria-hidden="true">' + one + one + '</div></div>';
+}
+function linkOf(a) {
+  const m = /^(p|s):(.+)$/.exec(a.link || ''); if (!m) return null;
+  if (m[1] === 'p') { const p = prod(m[2]); return p ? { p } : null; }
+  return S.cat.sections.includes(m[2]) ? { s: m[2] } : null;
+}
+function adRailHTML() {
+  const as = imgAds(); if (!as.length) return '';
+  return '<div class="adwrap"><div class="adrail" id="adrail" dir="ltr" data-keep="adrail">' + as.map((a, i) => {
+    const l = linkOf(a);
+    return '<button class="adslide" data-act="adTap" data-v="' + i + '" aria-label="' + esc(a.text || 'إعلان') + '">' + imgTag(a.img, '') +
+      (l ? '<span class="adgo" dir="rtl">' + (l.p ? 'اطلبه الآن ‹' : 'تصفّح ‹') + '</span>' : '') +
+      (a.text ? '<span class="adcap" dir="rtl">' + esc(a.text) + '</span>' : '') + '</button>';
+  }).join('') + '</div>' + (as.length > 1 ? '<div class="addots" id="addots" aria-hidden="true">' + as.map((a, i) => '<i' + (i === S.ad % as.length ? ' class="on"' : '') + '></i>').join('') + '</div>' : '') + '</div>';
+}
+/* ترتيب عشوائي ثابت طوال اليوم، يتغير كل يوم */
+function dayShuffle(arr, salt) {
+  let h = 2166136261; const key = new Date().toDateString() + salt;
+  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619);
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) { h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0; const j = h % (i + 1); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+const subOf = p => (S.cat.staged || []).includes(p.sec) ? p.l1 : (p.l2 || p.l1 || '');
+function pcard(p, isNew) {
+  const q = S.cart[p.id] || 0, sub = subOf(p);
+  return '<div class="pc' + (p.avail ? '' : ' out') + '" data-pid="' + esc(p.id) + '"' + (isNew ? ' data-new="1"' : '') + '>' +
+    '<button class="pt" data-act="tapP" data-v="' + esc(p.id) + '" aria-label="' + (p.avail ? 'أضف ' : '') + esc(p.name) + (p.avail ? ' إلى السلة' : ' — غير متوفر') + '">' +
+    '<span class="pim">' + imgTag(p.img, '') + (p.avail && !q ? '<span class="pplus" aria-hidden="true">+</span>' : '') + '</span>' +
+    '<span class="pn">' + esc(p.name) + '</span>' + (sub ? '<span class="ps">' + esc(sub) + '</span>' : '') +
+    '<span class="pp">' + (p.avail ? money(p.price) : 'غير متوفر') + '</span></button>' +
+    (q ? '<span class="pq" aria-label="في السلة ' + q + '">' + q + '</span><button class="pm" data-act="decP" data-v="' + esc(p.id) + '" aria-label="إنقاص واحدة">−</button>' : (isNew ? '<span class="newtag">جديد</span>' : '')) + '</div>';
+}
+function shelf(title, list, key, sec, isNew) {
+  if (!list.length) return '';
+  return '<section class="shelf"><div class="shelf-h"><h2>' + esc(title) + '</h2>' + (sec ? '<button class="b-white" data-act="sec" data-v="' + esc(sec) + '">عرض الكل</button>' : '') + '</div>' +
+    '<div class="rail" data-keep="' + esc(key) + '">' + list.map(p => pcard(p, isNew)).join('') + '</div></section>';
+}
+function shelvesHTML() {
+  const ps = S.cat.products.filter(p => hasImg(p.img) && p.avail);
+  let out = shelf('جديدنا ✨', ps.slice(-14).reverse(), 'new', '', true);
+  const st = S.user && S.user.stage;
+  if (st) out += shelf('ملازم ' + st, dayShuffle(ps.filter(p => p.sec === 'الملازم' && p.l1 === st), 'st'), 'mine', '');
+  S.cat.sections.forEach(sec => { out += shelf(sec, dayShuffle(ps.filter(p => p.sec === sec), sec).slice(0, 18), 's_' + sec, sec); });
+  return out;
+}
+/* تحديث بطاقة واحدة وشريط السلة دون إعادة رسم الصفحة (حتى لا يقفز التمرير) */
+function refreshP(id, bump) {
+  const p = prod(id); if (!p) return;
+  document.querySelectorAll('.pc[data-pid="' + CSS.escape(String(id)) + '"]').forEach(el => {
+    const t = document.createElement('div'); t.innerHTML = pcard(p, el.dataset.new === '1'); const nn = t.firstChild;
+    el.replaceWith(nn); hydrate(); if (bump) nn.classList.add('bump');
+  });
+  const n = cartCount(), h = document.getElementById('hcart'); if (h) h.textContent = 'السلة' + (n ? ' (' + n + ')' : '');
+  renderBar();
+  if (S.sheet) document.getElementById('layer').innerHTML = sheetHTML();
+}
+let toastT = null;
+function toast(text, undoId) {
+  let t = document.getElementById('toast'); if (t) t.remove();
+  t = document.createElement('div'); t.id = 'toast'; t.setAttribute('role', 'status');
+  t.innerHTML = '<span class="grow">' + esc(text) + '</span>' + (undoId ? '<button class="b-line" data-act="undoP" data-v="' + esc(undoId) + '">تراجع</button>' : '');
+  document.body.appendChild(t); clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2600);
+}
+function sheetHTML() {
+  const p = prod(S.sheet); if (!p) return '';
+  const q = S.cart[p.id] || 0;
+  return '<button id="sheet-bg" data-act="closeSheet" aria-label="إغلاق"></button><div id="sheet" role="dialog" aria-modal="true" aria-label="' + esc(p.name) + '">' +
+    (hasImg(p.img) ? imgTag(p.img, '') : '') +
+    '<p style="font-size:19px;font-weight:800">' + esc(p.name) + '</p>' +
+    ([p.l1, p.l2].filter(Boolean).length ? '<p class="hint" style="font-weight:700">' + esc([p.l1, p.l2].filter(Boolean).join(' · ')) + '</p>' : '') +
+    '<p class="price" style="font-size:21px">' + money(p.price) + '</p>' +
+    (!p.avail ? '<span class="tag" style="align-self:flex-start">غير متوفر حالياً</span>' :
+      q ? '<div class="row"><div class="qty"><button class="b-line" data-act="decP" data-v="' + esc(p.id) + '" aria-label="إنقاص">−</button><strong style="font-size:20px;min-width:24px;text-align:center">' + q + '</strong><button class="b-red" data-act="incP" data-v="' + esc(p.id) + '" aria-label="زيادة">+</button></div><button class="b-black grow" data-act="cart">عرض السلة</button></div>' :
+      '<button class="b-red" data-act="incP" data-v="' + esc(p.id) + '">أضف إلى السلة</button>') +
+    '<button class="b-line" data-act="closeSheet">متابعة التسوق</button></div>';
+}
+function renderBar() {
+  const n = S.user && S.cat && (S.view === 'home' || S.view === 'browse') ? cartCount() : 0;
+  document.getElementById('cartbar').innerHTML = n ? '<button data-act="cart" aria-label="عرض السلة"><span class="cnt">' + n + '</span><span>عرض السلة</span><span class="sum">' + money(calc().subtotal) + '</span></button>' : '';
+  document.body.classList.toggle('hasbar', !!n);
+}
+
 /* ---------- الشاشات ---------- */
 const BACK = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
 function head(title, act) {
@@ -392,18 +551,17 @@ const V = {
       '<button class="b-white" data-act="home">دخول التطبيق</button></div>';
   },
   home() {
-    const n = cartCount(), u = unseen(), ads = S.cat.ads;
+    const n = cartCount(), u = unseen();
     const total = Number(S.cat.settings.stamps || 10), have = S.stamps % total;
     let pips = ''; for (let i = 0; i < total; i++) pips += '<i' + (i < have ? ' class="on"' : '') + '></i>';
     return '<div class="row"><button class="icon b-white" style="position:relative" data-act="openDrawer" aria-label="القائمة' + (u ? '، ' + u + ' عروض جديدة' : '') + '">' + SV(I.menu) + (u ? '<span class="badge">' + u + '</span>' : '') + '</button>' +
-      OWL(58) + '<h1 class="grow" style="font-size:22px">' + (isClosed() ? 'تصبح على خير ' : 'أهلاً ') + esc(S.user.name) + '</h1>' +
-      '<button class="b-white" style="width:auto" data-act="cart">السلة' + (n ? ' (' + n + ')' : '') + '</button></div>' + msg() + closedCard() +
-      (ads.length ? '<div class="card adcard"><div id="ad" class="adin">' + adHTML(ads[S.ad % ads.length]) + '</div>' +
-        (ads.length > 1 ? '<div class="dots" id="dots" aria-hidden="true">' + ads.map((a, i) => '<i' + (i === S.ad % ads.length ? ' class="on"' : '') + '></i>').join('') + '</div>' : '') + '</div>' : '') +
-      ('<button class="mini" data-act="loyalty">' + SV(I.card).replace('<svg ', '<svg width="34" height="34" style="color:#D91219;flex-shrink:0" ') +
-        '<span class="grow" style="display:flex;flex-direction:column;gap:6px"><span>بطاقة الوفاء · ' + have + ' / ' + total + (S.rewards ? ' · لديك هدية 🎁' : '') + '</span><span class="pips">' + pips + '</span></span></button>') +
-      '<h2>الأقسام</h2><div class="grid">' +
-      S.cat.sections.map(s => '<button class="tile" data-act="sec" data-v="' + esc(s) + '">' + icon(s) + '<span>' + esc(s) + '</span></button>').join('') + '</div>';
+      OWLFAM(60) + '<h1 class="grow" style="font-size:20px;line-height:1.25">' + (isClosed() ? 'تصبح على خير ' : 'أهلاً ') + esc(S.user.name) + '</h1>' +
+      '<button class="b-white" id="hcart" style="width:auto;padding-inline:12px" data-act="cart">السلة' + (n ? ' (' + n + ')' : '') + '</button></div>' + msg() + closedCard() +
+      tickerHTML() + adRailHTML() +
+      '<div class="secs">' + S.cat.sections.map(s => '<button class="sec" data-act="sec" data-v="' + esc(s) + '">' + icon(s) + '<span>' + esc(s) + '</span></button>').join('') + '</div>' +
+      ('<button class="mini" data-act="loyalty" style="padding:10px 14px;min-height:0">' + SV(I.card).replace('<svg ', '<svg width="30" height="30" style="color:#D91219;flex-shrink:0" ') +
+        '<span class="grow" style="display:flex;flex-direction:column;gap:5px;font-size:15px"><span>بطاقة الوفاء · ' + have + ' / ' + total + (S.rewards ? ' · لديك هدية 🎁' : '') + '</span><span class="pips">' + pips + '</span></span></button>') +
+      shelvesHTML();
   },
   offers() {
     const os = offers();
@@ -505,12 +663,13 @@ const V = {
 };
 function render() {
   const app = document.getElementById('app');
+  const keep = {}; if (!S.anim) document.querySelectorAll('[data-keep]').forEach(e => { keep[e.dataset.keep] = e.scrollLeft; });
   app.className = S.anim ? 'enter' : '';
   app.innerHTML = V[S.view]();
-  document.getElementById('layer').innerHTML = S.review ? reviewHTML() : S.drawer && S.user ? drawerHTML() : '';
-  const n = S.user && S.cat && (S.view === 'home' || S.view === 'browse') ? cartCount() : 0;
-  document.getElementById('cartbar').innerHTML = n ? '<button data-act="cart" aria-label="عرض السلة"><span class="cnt">' + n + '</span><span>عرض السلة</span><span class="sum">' + money(calc().subtotal) + '</span></button>' : '';
-  document.body.classList.toggle('hasbar', !!n);
+  document.getElementById('layer').innerHTML = S.review ? reviewHTML() : S.sheet ? sheetHTML() : S.drawer && S.user ? drawerHTML() : '';
+  renderBar();
+  document.querySelectorAll('[data-keep]').forEach(e => { if (keep[e.dataset.keep] != null) e.scrollLeft = keep[e.dataset.keep]; });
+  const ar = document.getElementById('adrail'); if (ar && S.ad) ar.scrollLeft = (S.ad % ar.children.length) * ar.clientWidth;
   hydrate();
   if (S.anim) window.scrollTo(0, 0);
   S.anim = false;
@@ -534,7 +693,7 @@ function reviewHTML() {
 }
 let reviewTimer = null;
 function stopReview() { clearInterval(reviewTimer); reviewTimer = null; S.review = null; }
-function go(v) { S.view = v; S.msg = ''; S.anim = true; S.drawer = false; render(); }
+function go(v) { S.view = v; S.msg = ''; S.anim = true; S.drawer = false; S.sheet = null; const t = document.getElementById('toast'); if (t) t.remove(); render(); }
 function saveCart() { store.set('rw_cart', S.cart); }
 function syncCo() {
   const a = document.getElementById('f-area'), n = document.getElementById('f-note'), ad = document.getElementById('f-addr'), pc = document.getElementById('f-promo');
@@ -554,6 +713,24 @@ function loadStatus(view) {
 }
 
 const ACT = {
+  tapP(d) {
+    const p = prod(d.v); if (!p) return;
+    if (!p.avail) { toast('غير متوفر حالياً'); return; }
+    S.cart[p.id] = (S.cart[p.id] || 0) + 1; S.promo.discount = 0; saveCart(); refreshP(p.id, true);
+    toast('أُضيفت «' + p.name.split(' — ')[0] + '» إلى السلة ✓', p.id);
+    if (navigator.vibrate) try { navigator.vibrate(12); } catch (e) {}
+  },
+  incP(d) { S.cart[d.v] = (S.cart[d.v] || 0) + 1; S.promo.discount = 0; saveCart(); refreshP(d.v, true); },
+  decP(d) { S.promo.discount = 0; S.cart[d.v] = Math.max(0, (S.cart[d.v] || 0) - 1); if (!S.cart[d.v]) delete S.cart[d.v]; saveCart(); refreshP(d.v); },
+  undoP(d) { ACT.decP(d); const t = document.getElementById('toast'); if (t) t.remove(); },
+  adTap(d) {
+    const a = imgAds()[+d.v]; if (!a) return;
+    const l = linkOf(a);
+    if (l && l.p) { S.sheet = l.p.id; render(); return; }
+    if (l && l.s) { ACT.sec({ v: l.s }); return; }
+    ACT.zoom({ v: a.img });
+  },
+  closeSheet() { S.sheet = null; render(); },
   start() { go(S.user ? 'home' : 'register'); refreshStatus(); },
   openDrawer() { S.drawer = true; render(); },
   closeDrawer() { S.drawer = false; render(); },
@@ -676,7 +853,7 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]');
   if (b && ACT[b.dataset.act]) ACT[b.dataset.act](b.dataset);
 });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.review && !S.busy) { stopReview(); render(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.review && !S.busy) { stopReview(); render(); } else if (e.key === 'Escape' && S.sheet) { S.sheet = null; render(); } });
 document.addEventListener('change', e => {
   if (e.target.dataset.change === 'area') { syncCo(); render(); }
   if (e.target.id === 'f-photo' && e.target.files && e.target.files[0]) {
@@ -692,13 +869,20 @@ document.addEventListener('change', e => {
 });
 let wasClosed = null;
 setInterval(() => { const c = isClosed(); if (wasClosed !== null && c !== wasClosed && !S.review && (S.view === 'home' || S.view === 'checkout')) render(); wasClosed = c; }, 30000);
+/* إعلانات الصور: يسحبها الزبون بإصبعه، وتتقلب وحدها إن تركها */
+let adTouch = 0;
+['touchstart', 'pointerdown', 'wheel'].forEach(ev => document.addEventListener(ev, e => { if (e.target.closest && e.target.closest('#adrail')) adTouch = Date.now(); }, { passive: true }));
+document.addEventListener('scroll', e => {
+  const r = e.target; if (!r || r.id !== 'adrail' || !r.clientWidth) return;
+  const k = Math.round(r.scrollLeft / r.clientWidth); if (k === S.ad % r.children.length) return;
+  S.ad = k; document.querySelectorAll('#addots i').forEach((d, i) => d.classList.toggle('on', i === k));
+}, true);
 setInterval(() => {
-  const el = document.getElementById('ad');
-  if (el && S.cat && S.cat.ads.length > 1) {
-    S.ad++; const k = S.ad % S.cat.ads.length; el.innerHTML = adHTML(S.cat.ads[k]); hydrate(); el.classList.remove('adin'); void el.offsetWidth; el.classList.add('adin');
-    const ds = document.querySelectorAll('#dots i'); ds.forEach((d, i) => d.classList.toggle('on', i === k));
-  }
-}, 4000);
+  const r = document.getElementById('adrail');
+  if (!r || document.hidden || S.sheet || S.drawer || S.review || r.children.length < 2 || Date.now() - adTouch < 8000) return;
+  const k = (Math.round(r.scrollLeft / r.clientWidth) + 1) % r.children.length;
+  r.scrollTo({ left: k * r.clientWidth, behavior: 'smooth' });
+}, 4500);
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 render();

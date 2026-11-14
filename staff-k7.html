@@ -236,10 +236,18 @@ const V = {
         : '<button class="delbtn" data-act="delAsk">🗑 حذف هذا المنتج</button>') + '</div>';
   },
   ads() {
-    return '<p class="hint">الإعلانات تظهر في أعلى الصفحة الرئيسية للتطبيق وتتبدل كل ٤ ثوانٍ. أضف صورة، وإن شئت نصاً قصيراً تحتها.</p>' +
-      '<button class="red" data-act="addAd">+ إضافة إعلان بصورة</button>' +
-      (S.ads.length ? S.ads.map((a, i) => '<div class="ad">' + (a.data ? '<img src="' + a.data + '" alt="">' : a.img ? imgTag(a.img, '') : '') +
-        '<input data-ad="' + i + '" value="' + esc(a.text) + '" placeholder="نص تحت الصورة (اختياري)" aria-label="نص الإعلان">' +
+    const sel = (a, i) => {
+      const opts = '<option value="">بدون رابط — الضغط يكبّر الصورة فقط</option>' +
+        '<optgroup label="يفتح قسماً">' + S.d.sections.map(x => '<option value="s:' + esc(x.name) + '"' + (a.link === 's:' + x.name ? ' selected' : '') + '>القسم: ' + esc(x.name) + '</option>').join('') + '</optgroup>' +
+        S.d.sections.map(x => { const ps = S.d.products.filter(p => p.sec === x.name); return ps.length ? '<optgroup label="منتج من ' + esc(x.name) + '">' +
+          ps.map(p => '<option value="p:' + esc(p.id) + '"' + (a.link === 'p:' + p.id ? ' selected' : '') + '>' + esc(p.name) + (p.l1 ? ' — ' + esc(p.l1) : '') + '</option>').join('') + '</optgroup>' : ''; }).join('');
+      return '<label class="hint" style="font-weight:700">عند ضغط الزبون على الإعلان:</label><select data-adl="' + i + '" aria-label="رابط الإعلان">' + opts + '</select>';
+    };
+    return '<p class="hint">إعلانات الصور تظهر في الصفحة الرئيسية ويقلّبها الزبون بإصبعه (وتتقلب وحدها كل ٤ ثوانٍ). اربط الإعلان بمنتج ليفتحه الزبون ويضيفه للسلة مباشرة. الإعلانات النصية تظهر في شريط متحرك أعلى الصفحة.</p>' +
+      '<div class="row" style="gap:8px"><button class="red" data-act="addAd">+ إعلان بصورة</button><button class="small" style="white-space:nowrap" data-act="addTextAd">+ إعلان نصي</button></div>' +
+      (S.ads.length ? S.ads.map((a, i) => '<div class="ad">' + (a.data ? '<img src="' + a.data + '" alt="">' : a.img ? imgTag(a.img, '') : '<p class="hint" style="font-weight:800">📢 إعلان نصي (شريط متحرك)</p>') +
+        '<input data-ad="' + i + '" value="' + esc(a.text) + '" placeholder="' + (a.img || a.data ? 'نص على الصورة (اختياري)' : 'نص الإعلان') + '" aria-label="نص الإعلان">' +
+        (a.img || a.data ? sel(a, i) : '') +
         '<button class="small" data-act="delAd" data-v="' + i + '">حذف هذا الإعلان</button></div>').join('') : '<div class="card"><p>لا توجد إعلانات.</p></div>');
   },
   branches() {
@@ -338,7 +346,7 @@ function load() {
   S.view = 'loading'; render();
   api('admin_get').then(r => {
     if (!r.ok) { S.view = S.d && S.auth ? 'main' : 'login'; say(r.error || 'تعذر التحميل'); render(); return; }
-    S.d = r; S.ads = (r.ads || []).map(a => ({ text: a.text || '', img: a.img || '' })); S.branches = (r.branches || []).map(b => ({ name: b.name || '', phone: b.phone || '', map: b.map || '' }));
+    S.d = r; S.ads = (r.ads || []).map(a => ({ text: a.text || '', img: a.img || '', link: a.link || '' })); S.branches = (r.branches || []).map(b => ({ name: b.name || '', phone: b.phone || '', map: b.map || '' }));
     S.view = 'main'; render();
   });
 }
@@ -348,7 +356,7 @@ function keepForm() {
   ['name', 'price', 'l1', 'l2'].forEach(k => { const e = $('e-' + k); if (e) S.edit[k] = e.value; });
 }
 function keepBr() { document.querySelectorAll('[data-b]').forEach(e => { S.branches[+e.dataset.b][e.dataset.f] = e.value; }); }
-function keepAds() { document.querySelectorAll('[data-ad]').forEach(e => { S.ads[+e.dataset.ad].text = e.value; }); }
+function keepAds() { document.querySelectorAll('[data-ad]').forEach(e => { S.ads[+e.dataset.ad].text = e.value; }); document.querySelectorAll('[data-adl]').forEach(e => { S.ads[+e.dataset.adl].link = e.value; }); }
 
 const ACT = {
   setup(d) { S.setup = d.v === '1'; say(''); render(); },
@@ -375,6 +383,7 @@ const ACT = {
   back() { if (history.state && history.state.form) history.back(); else closeForm(); },
   pick() { keepForm(); S.pickFor = 'item'; $('pick').click(); },
   addAd() { keepAds(); S.pickFor = 'ad'; $('pick').click(); },
+  addTextAd() { keepAds(); S.ads.unshift({ text: '', img: '', link: '' }); say('اكتب نص الإعلان ثم اضغط "رفع الإعلانات".', true); render(); const f = document.querySelector('[data-ad="0"]'); if (f) f.focus(); },
   delAd(d) { keepAds(); S.ads.splice(+d.v, 1); say('حُذف من القائمة. اضغط "رفع الإعلانات" للحفظ.', true); render(); },
   save() {
     keepForm();
@@ -405,7 +414,7 @@ const ACT = {
         IMGS[r.id] = a.data; store.set('rwi_' + r.id, a.data); a.img = r.id; delete a.data;
       }));
     });
-    chain.then(() => api('admin_ads', { ads: S.ads.map(a => ({ text: a.text, img: a.img })) })).then(r => {
+    chain.then(() => api('admin_ads', { ads: S.ads.map(a => ({ text: a.text, img: a.img, link: a.link || '' })) })).then(r => {
       if (!r.ok) throw new Error(r.error || 'تعذر الحفظ');
       S.busy = false; say('تم رفع الإعلانات ✓', true); render();
     }).catch(err => { S.busy = false; say(err.message); render(); });
@@ -524,7 +533,7 @@ document.addEventListener('change', e => {
     say('جارِ تجهيز الصورة…', true); render();
     shrink(f).then(d => {
       say('');
-      if (S.view === 'main' && S.tab === 'ads') { S.ads.unshift({ text: '', img: '', data: d }); say('أُضيفت. اكتب نصاً إن أردت ثم اضغط "رفع الإعلانات".', true); }
+      if (S.view === 'main' && S.tab === 'ads') { S.ads.unshift({ text: '', img: '', link: '', data: d }); say('أُضيفت. اكتب نصاً إن أردت ثم اضغط "رفع الإعلانات".', true); }
       else S.imgNew = d;
       render();
     }).catch(() => { say('تعذر قراءة هذه الصورة. جرّب صورة أخرى (JPG أو PNG).'); render(); });
