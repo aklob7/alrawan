@@ -31,6 +31,8 @@ input:focus,select:focus,button:focus-visible{outline:3px solid var(--red);outli
 .card{border:2px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px}
 .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .tabs.two{grid-template-columns:repeat(2,1fr)}
+.tabs.four{grid-template-columns:repeat(4,1fr)}
+.tabs.four button{font-size:14px;padding:6px 4px}
 .ord{border:2px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;background:#fff}
 .ord.new{border-color:var(--red);box-shadow:0 0 0 3px rgba(217,18,25,.12)}
 .ord .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -64,6 +66,17 @@ h3{font-size:16px;margin-top:4px}
 .delbtn{border-color:var(--red);color:var(--red);margin-top:8px}
 .row{display:flex;gap:8px;align-items:center}
 .ad{display:flex;flex-direction:column;gap:8px;border:2px solid var(--line);border-radius:14px;padding:10px}
+.cst{border:2px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;background:#fff;text-align:right;width:100%;min-height:0;font-weight:500}
+.cst.off{background:#fdf2f2;border-color:#f0b7b9}
+.cst .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cst .nums{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
+.cst .nums span{background:var(--soft);border-radius:10px;padding:4px 2px;font-size:13px;font-weight:700;line-height:1.3}
+.cst .nums b{display:block;font-size:17px}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.kpis div{border:2px solid var(--line);border-radius:14px;padding:10px;text-align:center;font-weight:700;font-size:14px}
+.kpis b{display:block;font-size:22px}
+.cact{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cact a{display:flex;align-items:center;justify-content:center;min-height:48px;border:2px solid var(--ink);border-radius:14px;font-weight:800;text-decoration:none;color:var(--ink)}
 .ad img{width:100%;max-height:200px;object-fit:cover;border-radius:10px}
 </style>
 </head>
@@ -155,11 +168,11 @@ const V = {
   main() {
     const own = S.d.role === 'owner';
     $('ttl').textContent = 'لوحة الروان · ' + (own ? 'صاحب المكتبة' : (S.auth && S.auth.name) || 'الموظف');
-    const list = own ? [['items', 'المنتجات'], ['ads', 'الإعلانات'], ['branches', 'الفروع'], ['caps', 'الكباتن'], ['staff', 'الموظفون'], ['apps', 'التطبيقات']] : [['items', 'المنتجات'], ['apps', 'التطبيقات']];
+    const list = own ? [['items', 'المنتجات'], ['custs', 'الزبائن'], ['ads', 'الإعلانات'], ['branches', 'الفروع'], ['caps', 'الكباتن'], ['staff', 'الموظفون'], ['apps', 'التطبيقات']] : [['items', 'المنتجات'], ['custs', 'الزبائن'], ['apps', 'التطبيقات']];
     const nNew = (S.orders || []).filter(o => o.status === 'جديد' || o.status === 'مؤجل').length;
-    const tabs = '<div class="tabs' + (own ? '' : ' two') + '">' + list.map(t =>
+    const tabs = '<div class="tabs' + (own ? ' four' : '') + '">' + list.map(t =>
       '<button class="' + (S.tab === t[0] ? 'on' : '') + '" data-act="tab" data-v="' + t[0] + '">' + t[1] + (t[0] === 'orders' && nNew ? ' (' + nNew + ')' : '') + '</button>').join('') + '</div>';
-    return tabs + msg() + (S.tab === 'apps' ? V.apps() : S.tab === 'orders' ? V.orders() : S.tab === 'ads' && own ? V.ads() : S.tab === 'branches' && own ? V.branches() : S.tab === 'caps' && own ? V.caps() : S.tab === 'staff' && own ? V.staff() : V.items());
+    return tabs + msg() + (S.tab === 'custs' ? V.custs() : S.tab === 'apps' ? V.apps() : S.tab === 'orders' ? V.orders() : S.tab === 'ads' && own ? V.ads() : S.tab === 'branches' && own ? V.branches() : S.tab === 'caps' && own ? V.caps() : S.tab === 'staff' && own ? V.staff() : V.items());
   },
   orders() {
     if (!S.orders) return '<div class="card"><p style="font-weight:800">جارِ تحميل الطلبات…</p></div>';
@@ -172,6 +185,56 @@ const V = {
       grp('قيد الإعداد', o => o.status === 'قيد الإعداد' || o.status === 'مقبول') +
       grp('جاهزة / مع الكابتن', o => o.status === 'جاهز للاستلام' || o.status === 'قيد التوصيل' || o.status === 'في الطريق');
     return sub + '<p class="hint">تتحدث تلقائياً كل ١٥ ثانية، ويصدر صوت عند وصول طلب جديد.</p>' + (body || '<div class="card"><p style="font-weight:800">لا توجد طلبات جارية الآن.</p></div>');
+  },
+  custs() {
+    if (!S.custs) return '<div class="card"><p style="font-weight:800">جارِ تحميل الزبائن…</p></div>';
+    const own = S.d.role === 'owner', all = S.custs, q = (S.cq || '').trim(), qd = q.replace(/\D/g, '').replace(/^0+/, '');
+    if (S.cust) return V.cust(own);
+    const since = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10), month = new Date().toISOString().slice(0, 7);
+    const k = { all: all.length, students: all.filter(c => c.type === 'طالب').length, active: all.filter(c => c.last && c.last.slice(0, 10) >= since).length,
+      fresh: all.filter(c => c.joined.slice(0, 7) === month).length, never: all.filter(c => !c.n).length, blocked: all.filter(c => c.blocked).length };
+    const F = { all: () => true, buyers: c => c.delivered > 0, never: c => !c.n, top: c => c.spent > 0, students: c => c.type === 'طالب', returns: c => c.returned > 0, blocked: c => c.blocked };
+    let list = all.filter(F[S.cf] || F.all).filter(c => !q || c.name.includes(q) || (qd && c.phone.replace(/^0+/, '').includes(qd)) || (c.stage || '').includes(q));
+    const sorts = { new: (a, b) => (b.joined > a.joined ? 1 : -1), spent: (a, b) => b.spent - a.spent, orders: (a, b) => b.n - a.n, last: (a, b) => ((b.last || '') > (a.last || '') ? 1 : -1) };
+    list = list.slice().sort(sorts[S.cs] || (S.cf === 'top' ? sorts.spent : sorts.new));
+    const shown = list.slice(0, S.cmore || 60);
+    const opt = (v, t, cur) => '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + t + '</option>';
+    return '<div class="kpis"><div><b>' + k.all + '</b>كل الزبائن</div><div><b>' + k.fresh + '</b>سجّلوا هذا الشهر</div><div><b>' + k.active + '</b>طلبوا خلال ٣٠ يوماً</div><div><b>' + k.never + '</b>سجّلوا ولم يطلبوا</div>' +
+      '<div><b>' + k.students + '</b>طلاب</div><div><b>' + k.blocked + '</b>موقوفون</div></div>' +
+      '<input id="c-q" type="search" placeholder="ابحث بالاسم أو رقم الهاتف أو المرحلة" value="' + esc(S.cq || '') + '" aria-label="بحث في الزبائن">' +
+      '<div class="row"><div style="flex:1"><label for="c-f" class="hint">عرض</label><select id="c-f" data-change="cf">' + opt('all', 'الكل', S.cf || 'all') + opt('buyers', 'اشتروا فعلاً', S.cf) + opt('top', 'أكثر الزبائن شراءً', S.cf) + opt('never', 'سجّلوا ولم يطلبوا', S.cf) + opt('students', 'الطلاب', S.cf) + opt('returns', 'لديهم طلبات راجعة', S.cf) + opt('blocked', 'الموقوفون', S.cf) + '</select></div>' +
+      '<div style="flex:1"><label for="c-s" class="hint">ترتيب</label><select id="c-s" data-change="cs">' + opt('', 'تلقائي', S.cs || '') + opt('new', 'الأحدث تسجيلاً', S.cs) + opt('last', 'آخر طلب', S.cs) + opt('orders', 'عدد الطلبات', S.cs) + opt('spent', 'مجموع الشراء', S.cs) + '</select></div></div>' +
+      '<div class="row"><p class="hint" style="flex:1">' + list.length + ' زبون</p><button class="small" data-act="custReload">تحديث</button>' + (own ? '<button class="small" data-act="custCsv">تنزيل Excel</button>' : '') + '</div>' +
+      (shown.length ? shown.map(c => '<button class="cst' + (c.blocked ? ' off' : '') + '" data-act="custOpen" data-v="' + esc(c.phone) + '">' +
+        '<span class="top"><b style="flex:1;font-size:17px">' + esc(c.name) + '</b>' + (c.blocked ? '<span class="tag r">موقوف</span>' : '') + '<span class="tag">' + esc(c.type || 'زبون') + '</span></span>' +
+        '<span class="hint" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span dir="ltr">' + esc(c.phone) + '</span><span>' + esc(c.stage || '') + '</span></span>' +
+        '<span class="nums"><span><b>' + c.n + '</b>طلبات</span><span><b>' + c.delivered + '</b>مسلّمة</span><span><b>' + c.returned + '</b>راجعة</span><span><b style="font-size:14px">' + (c.spent ? Number(c.spent).toLocaleString('en-US') : '0') + '</b>د.ع</span></span>' +
+        '<span class="hint">' + (c.last ? 'آخر طلب: ' + esc(c.last.slice(0, 10)) : 'لم يطلب بعد') + ' · سجّل ' + esc(c.joined.slice(0, 10)) + (c.note ? ' · فيه ملاحظة' : '') + '</span></button>').join('') +
+        (list.length > shown.length ? '<button data-act="custMore">عرض المزيد (' + (list.length - shown.length) + ')</button>' : '')
+        : '<div class="card"><p>لا يوجد زبائن بهذا البحث.</p></div>');
+  },
+  cust(own) {
+    const c = S.custs.find(x => x.phone === S.cust); if (!c) { S.cust = null; return V.custs(); }
+    const intl = '964' + c.phone.replace(/^0+/, '');
+    const os = S.custOrders;
+    const stTag = s => '<span class="tag' + (s === 'تم التسليم' ? ' g' : s === 'راجع' || s === 'مرفوض' ? ' r' : '') + '">' + esc(s) + '</span>';
+    return '<button class="small" data-act="custBack" style="align-self:flex-start">→ كل الزبائن</button>' +
+      '<div class="card"><div class="row"><h2 style="flex:1">' + esc(c.name) + '</h2>' + (c.blocked ? '<span class="tag r">موقوف</span>' : '<span class="tag g">فعّال</span>') + '</div>' +
+      '<p class="hint" style="font-weight:700">' + esc(c.type || 'زبون') + (c.stage ? ' · ' + esc(c.stage) : '') + ' · سجّل ' + esc(c.joined.slice(0, 10)) + '</p>' +
+      '<p dir="ltr" style="font-weight:800;font-size:20px;text-align:right">' + esc(c.phone) + '</p>' +
+      '<div class="cact"><a href="tel:' + esc(c.phone) + '">اتصال</a><a href="https://wa.me/' + esc(intl) + '" target="_blank" rel="noopener">واتساب</a><a href="sms:' + esc(c.phone) + '">رسالة</a></div>' +
+      (own && c.code ? '<p class="hint">رقم الحساب (للدخول من جهاز آخر): <b dir="ltr" style="color:var(--ink);font-size:17px">' + esc(c.code) + '</b></p>' : '') +
+      '</div>' +
+      '<div class="kpis"><div><b>' + c.n + '</b>كل الطلبات</div><div><b>' + c.delivered + '</b>مسلّمة</div><div><b>' + c.returned + '</b>راجعة</div><div><b>' + c.rejected + '</b>مرفوضة</div>' +
+      '<div><b>' + money(c.spent) + '</b>مجموع ما اشتراه</div><div><b>' + (c.delivered ? money(Math.round(c.spent / c.delivered)) : '—') + '</b>متوسط الطلب</div>' +
+      '<div><b>' + c.stamps + ' / ' + S.per + '</b>أختام بطاقة الوفاء</div><div><b>' + c.gifts + '</b>هدايا متاحة</div></div>' +
+      (own ? '<div class="card"><h3>ملاحظة الإدارة (لا يراها الزبون)</h3><input id="c-note" maxlength="200" value="' + esc(c.note) + '" placeholder="مثلاً: يفضّل الاتصال قبل التوصيل" aria-label="ملاحظة الإدارة">' +
+        '<button class="black" data-act="custNote"' + (S.busy ? ' disabled' : '') + '>حفظ الملاحظة</button>' +
+        '<button class="' + (c.blocked ? 'red' : 'delbtn') + '" data-act="custBlock"' + (S.busy ? ' disabled' : '') + '>' + (c.blocked ? 'إعادة تفعيل الحساب' : 'إيقاف الحساب (لا يستطيع إرسال طلبات)') + '</button></div>'
+        : (c.note ? '<div class="card"><h3>ملاحظة الإدارة</h3><p>' + esc(c.note) + '</p></div>' : '')) +
+      '<h3>طلباته</h3>' + (!os ? '<div class="card"><p>جارِ التحميل…</p></div>' : os.length ? os.map(o => '<div class="ord"><div class="top"><b style="flex:1">' + esc(o.no) + '</b>' + stTag(o.status) + '</div>' +
+        '<div class="ln"><span>' + esc(o.date) + '</span><b>' + money(o.total) + '</b></div><div class="it">' + esc(o.items.split('، ').join('\n')) + '</div>' +
+        '<div class="ln"><span>' + esc(o.mode) + (o.area ? ' · ' + esc(o.area) : '') + '</span><span>' + esc(o.captain || '') + '</span></div>' + (o.reason ? '<p class="hint">السبب: ' + esc(o.reason) + '</p>' : '') + '</div>').join('') : '<div class="card"><p>لم يطلب بعد.</p></div>');
   },
   apps() {
     const u = f => new URL(f, location.href).href;
@@ -359,6 +422,21 @@ function keepBr() { document.querySelectorAll('[data-b]').forEach(e => { S.branc
 function keepAds() { document.querySelectorAll('[data-ad]').forEach(e => { S.ads[+e.dataset.ad].text = e.value; }); document.querySelectorAll('[data-adl]').forEach(e => { S.ads[+e.dataset.adl].link = e.value; }); }
 
 const ACT = {
+  custOpen(d) { S.cust = d.v; S.custOrders = null; render(); window.scrollTo(0, 0); api('admin_cust', { phone: d.v }).then(r => { if (S.cust !== d.v) return; S.custOrders = r.ok ? r.orders : []; if (!r.ok) say(r.error || 'تعذر التحميل'); render(); }); },
+  custBack() { S.cust = null; render(); },
+  custMore() { S.cmore = (S.cmore || 60) + 60; render(); },
+  custReload() { S.custs = null; render(); loadCusts(); },
+  custNote() { const c = S.custs.find(x => x.phone === S.cust); if (!c) return; const v = $('c-note').value.trim(); S.busy = true; render();
+    api('admin_custsave', { phone: c.phone, note: v }).then(r => { S.busy = false; if (r.ok) { c.note = v; say('حُفظت الملاحظة', true); } else say(r.error || 'تعذر الحفظ'); render(); }); },
+  custBlock() { const c = S.custs.find(x => x.phone === S.cust); if (!c) return; const to = !c.blocked; S.busy = true; render();
+    api('admin_custsave', { phone: c.phone, blocked: to }).then(r => { S.busy = false; if (r.ok) { c.blocked = to; say(to ? 'أوقِف الحساب. لن يستطيع إرسال طلبات جديدة.' : 'أعيد تفعيل الحساب.', true); } else say(r.error || 'تعذر الحفظ'); render(); }); },
+  custCsv() {
+    const cell = v => { v = String(v == null ? '' : v); if (/^[=+\-@]/.test(v)) v = "'" + v; return '"' + v.replace(/"/g, '""') + '"'; };
+    const head = ['الاسم', 'الهاتف', 'النوع', 'المرحلة', 'تاريخ التسجيل', 'عدد الطلبات', 'المسلّمة', 'الراجعة', 'المرفوضة', 'مجموع الشراء', 'آخر طلب', 'موقوف', 'ملاحظة'];
+    const rows = S.custs.map(c => [c.name, c.phone, c.type, c.stage, c.joined, c.n, c.delivered, c.returned, c.rejected, c.spent, c.last, c.blocked ? 'نعم' : '', c.note]);
+    const csv = '﻿' + [head].concat(rows).map(r => r.map(cell).join(',')).join('\r\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = 'rawan-customers-' + new Date().toISOString().slice(0, 10) + '.csv'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  },
   setup(d) { S.setup = d.v === '1'; say(''); render(); },
   sendCode() {
     S.busy = true; say(''); render();
@@ -377,7 +455,7 @@ const ACT = {
     api('admin_login', { password }).then(done);
   },
   logout() { S.auth = null; store.set('rw_admin', null); S.d = null; S.view = 'login'; S.setup = false; say(''); render(); },
-  tab(d) { if (S.tab === 'ads') keepAds(); if (S.tab === 'branches') keepBr(); if (d.v === 'orders') loadOrders(true); if (d.v === 'caps' && !S.caps) loadCaps(); if (d.v === 'staff' && !S.staffs) loadStaffs(); document.title = 'لوحة الروان'; S.tab = d.v; say(''); render(); },
+  tab(d) { if (S.tab === 'ads') keepAds(); if (S.tab === 'branches') keepBr(); if (d.v === 'orders') loadOrders(true); if (d.v === 'caps' && !S.caps) loadCaps(); if (d.v === 'staff' && !S.staffs) loadStaffs(); if (d.v === 'custs') { S.cust = null; if (!S.custs) loadCusts(); } document.title = 'لوحة الروان'; S.tab = d.v; say(''); render(); },
   add() { S.edit = { id: '', sec: S.f, l1: '', l2: '', name: '', price: '', img: '' }; S.imgNew = ''; say(''); openForm(); },
   edit(d) { const p = S.d.products.find(x => x.id === d.v); if (!p) return; S.edit = Object.assign({}, p); S.imgNew = ''; say(''); openForm(); },
   back() { if (history.state && history.state.form) history.back(); else closeForm(); },
@@ -501,6 +579,7 @@ function stSave(data, okMsg) {
     S.stNew = false; S.stCode = ''; say(okMsg, true); loadStaffs();
   });
 }
+function loadCusts() { api('admin_custs').then(r => { S.custs = r.ok ? r.custs : []; S.per = r.per || 10; if (!r.ok) say(r.error || 'تعذر التحميل'); render(); }); }
 function loadCaps() { api('admin_caps').then(r => { S.caps = r.ok ? r.caps : []; if (!r.ok) say(r.error || 'تعذر التحميل'); render(); }); }
 function capSave(data, okMsg) {
   S.busy = true; render();
@@ -526,6 +605,8 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('change', e => {
   if (e.target.dataset.change === 'filter') { S.f = e.target.value; render(); }
+  if (e.target.dataset.change === 'cf') { S.cf = e.target.value; S.cmore = 60; render(); }
+  if (e.target.dataset.change === 'cs') { S.cs = e.target.value; render(); }
   if (e.target.dataset.change === 'esec') { keepForm(); S.edit.sec = e.target.value; S.edit.l1 = ''; render(); }
   if (e.target.id === 'pick' && e.target.files[0]) {
     const f = e.target.files[0]; e.target.value = '';
@@ -541,10 +622,11 @@ document.addEventListener('change', e => {
 });
 let qt;
 document.addEventListener('input', e => {
-  if (e.target.id !== 'f-q') return;
+  if (e.target.id !== 'f-q' && e.target.id !== 'c-q') return;
+  const id = e.target.id;
   clearTimeout(qt); qt = setTimeout(() => {
-    S.q = e.target.value; const pos = e.target.selectionStart; render();
-    const n = $('f-q'); n.focus(); try { n.setSelectionRange(pos, pos); } catch (x) {}
+    if (id === 'c-q') { S.cq = e.target.value; S.cmore = 60; } else S.q = e.target.value; const pos = e.target.selectionStart; render();
+    const n = $(id); n.focus(); try { n.setSelectionRange(pos, pos); } catch (x) {}
   }, 250);
 });
 if (S.auth) load(); else render();
