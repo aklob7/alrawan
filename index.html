@@ -107,6 +107,8 @@ input,select,textarea{box-shadow:inset 0 3px 0 rgba(0,0,0,.08)}
 .ditem svg{width:24px;height:24px;flex-shrink:0}
 .ditem .badge{position:static;margin-inline-start:auto;border:none;background:var(--red)}
 .pushc{border:2px solid #FFD400;background:#FFFBEA}
+.permr.ok{border:2px solid #1B8A3A}
+button:disabled{opacity:.55}
 .mini{display:flex;align-items:center;gap:12px;text-align:start;background:linear-gradient(#fff,#F3F3F3);color:#111;box-shadow:0 7px 0 #D6D6D6,0 18px 26px rgba(0,0,0,.3)}
 .pips{display:flex;gap:5px;flex-wrap:wrap}.pips i{width:14px;height:14px;border-radius:50%;border:2px solid #111}.pips i.on{background:var(--red);border-color:var(--red)}
 @keyframes adIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
@@ -224,7 +226,7 @@ const store = {
 const S = {
   view: 'splash', user: store.get('rw_user', null), cart: store.get('rw_cart', {}), cat: null,
   sec: '', path: [], orders: [], stamps: 0, msg: '', busy: false, anim: true, drawer: false, photo: store.get('rw_photo', ''), seen: store.get('rw_seen', []), promo: { code: '', discount: 0 }, regType: 'student', ad: 0, rewards: 0, reward: '', newCode: '',
-  co: { mode: 'pickup', area: '', pay: 'cod', lat: null, lng: null, note: '', addr: '' }
+  co: Object.assign({ mode: 'pickup', area: '', pay: 'cod', lat: null, lng: null, note: '', addr: '' }, (l => l && l.lat ? { lat: l.lat, lng: l.lng } : {})(store.get('rw_loc', null)))
 };
 const SV = p => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>';
 const ICONS = {
@@ -546,6 +548,28 @@ const V = {
       '<span class="hint">رقم الحساب تجده في القائمة الجانبية على جهازك القديم. نسيته؟ راجع مكتبة الروان. (من سجّل سابقاً بكلمة سر يكتبها هنا)</span></div>' +
       '<button class="b-white" data-act="toRegister">حساب جديد</button>';
   },
+  perm() {
+    const n = notifState(), hasLoc = !!(store.get('rw_loc', null) || {}).lat;
+    const nOk = n === 'granted', nDone = nOk || S.permTN || n === 'denied' || n === 'none';
+    const lDone = hasLoc || S.permTL, can = nDone && lDone;
+    const row = (ic, title, ok, body) => '<div class="card permr' + (ok ? ' ok' : '') + '"><div class="row" style="align-items:flex-start"><span style="font-size:30px;line-height:1">' + ic + '</span><div class="grow">' +
+      '<p style="font-weight:800">' + title + (ok ? ' <span style="color:#1B8A3A">✓</span>' : '') + '</p>' + body + '</div></div></div>';
+    let nb;
+    if (nOk) nb = '<p class="hint">ستصلك العروض الجديدة وحالة طلبك.</p>';
+    else if (n === 'ios') nb = '<p class="hint">على الآيفون تعمل الإشعارات بعد إضافة الروان للشاشة الرئيسية: اضغط زر المشاركة ⬆️ في سفاري ← «إضافة إلى الشاشة الرئيسية»، ثم افتح الروان من أيقونته.</p>' +
+      (S.permTN ? '' : '<button class="b-line" data-act="permIOS">فهمت</button>');
+    else if (n === 'denied') nb = '<p class="hint">الإشعارات مرفوضة على هذا الجهاز. لتفعيلها: اضغط 🔒 بجانب رابط الصفحة ← الأذونات ← الإشعارات ← السماح.</p>';
+    else if (n === 'none') nb = '<p class="hint">هذا المتصفح لا يدعم الإشعارات. جرّب Chrome على أندرويد.</p>';
+    else nb = '<p class="hint">ليصلك كل جديد: الملازم، العروض، ووصول طلبك.</p><button class="b-red" data-act="permN">السماح بالإشعارات</button>';
+    const lb = hasLoc ? '<p class="hint">حُفظ موقعك، ويُستعمل تلقائياً عند طلب التوصيل. تستطيع تحديثه عند الطلب.</p>'
+      : '<p class="hint">ليصل كابتن الروان إلى بابك مباشرة دون اتصال.</p>' + (S.permLE ? '<p class="msg">' + esc(S.permLE) + '</p>' : '') +
+        '<button class="b-red" data-act="permL"' + (S.locating ? ' disabled' : '') + '>' + (S.locating ? 'جارِ تحديد الموقع…' : 'السماح بالموقع') + '</button>';
+    return '<div class="center" style="gap:12px">' + OWLFAM(70) + '<h1 style="text-align:center">خطوة أخيرة لإكمال حسابك</h1>' +
+      '<p style="text-align:center;color:#fff;font-weight:700">مكتبة الروان تحتاج إذنين لتخدمك أفضل:</p></div>' +
+      row('🔔', 'الإشعارات', nOk, nb) + row('📍', 'موقع التوصيل', hasLoc, lb) +
+      '<button class="b-white" data-act="permDone"' + (can ? '' : ' disabled') + '>متابعة</button>' +
+      (can ? '' : '<p class="hint" style="text-align:center;color:#fff">اسمح بالإشعارات والموقع للمتابعة</p>');
+  },
   welcome() {
     return '<div class="center"><img class="logo" src="' + LOGO + '" alt="" width="90" height="90"><h1>تم إنشاء حسابك</h1>' +
       '<div class="card" style="width:100%;text-align:center;align-items:center"><p style="font-weight:700">رقم حسابك</p>' +
@@ -715,6 +739,17 @@ function loadStatus(view) {
   });
 }
 
+/* ---------- خطوة الأذونات بعد فتح الحساب ---------- */
+function notifState() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) return isIOS() && !isStandalone() ? 'ios' : 'none';
+  if (!('PushManager' in window)) return isIOS() && !isStandalone() ? 'ios' : 'none';
+  return Notification.permission;
+}
+function afterAuth(next) { if (store.get('rw_perm', 0)) { go(next); return; } S.permNext = next; S.permTN = false; S.permTL = false; S.permLE = ''; go('perm'); }
+function getLoc(ok, fail) {
+  if (!window.isSecureContext || !navigator.geolocation) return fail({ code: 9 });
+  navigator.geolocation.getCurrentPosition(ok, e => e.code === 1 ? fail(e) : navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }), { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 });
+}
 /* ---------- إشعارات الهاتف (Firebase) ---------- */
 const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
@@ -745,7 +780,7 @@ async function fbToken() {
   return FB.messaging().getToken({ vapidKey: P.vapid, serviceWorkerRegistration: reg });
 }
 async function pushSync(force) {
-  if (pushState() !== 'on' && !force) return;
+  if (!force && !(S.cat && S.cat.push && 'Notification' in window && Notification.permission === 'granted')) return;
   const last = store.get('rw_pusht', 0);
   if (!force && Date.now() - last < 864e5 && store.get('rw_pushu', '') === (S.user ? S.user.phone : '')) return;
   try {
@@ -765,6 +800,24 @@ const ACT = {
     render();
   },
   pushLater() { store.set('rw_pushx', Date.now()); render(); },
+  async permN() {
+    let p = 'default'; try { p = await Notification.requestPermission(); } catch (e) {}
+    S.permTN = true; render();
+    if (p === 'granted' && S.cat && S.cat.push) pushSync(true);
+  },
+  permIOS() { S.permTN = true; render(); },
+  permL() {
+    S.locating = true; S.permLE = ''; render();
+    getLoc(pos => {
+      S.locating = false; const l = { lat: pos.coords.latitude, lng: pos.coords.longitude, at: Date.now() };
+      store.set('rw_loc', l); S.co.lat = l.lat; S.co.lng = l.lng; render();
+    }, e => {
+      S.locating = false; S.permTL = true;
+      S.permLE = e.code === 1 ? 'رفضت الموقع. ستحتاج تحديده عند كل طلب توصيل، أو فعّله من 🔒 بجانب رابط الصفحة ← الأذونات ← الموقع.' : 'تعذر تحديد الموقع الآن. تأكد أن GPS مفعّل، أو حدّده لاحقاً عند الطلب.';
+      render();
+    });
+  },
+  permDone() { store.set('rw_perm', 1); go(S.permNext || 'home'); },
   tapP(d) {
     const p = prod(d.v); if (!p) return;
     if (!p.avail) { toast('غير متوفر حالياً'); return; }
@@ -783,7 +836,7 @@ const ACT = {
     ACT.zoom({ v: a.img });
   },
   closeSheet() { S.sheet = null; render(); },
-  start() { go(S.user ? 'home' : 'register'); refreshStatus(); },
+  start() { if (S.user) afterAuth('home'); else go('register'); refreshStatus(); },
   openDrawer() { S.drawer = true; render(); },
   closeDrawer() { S.drawer = false; render(); },
   photo() { document.getElementById('f-photo').click(); },
@@ -818,7 +871,7 @@ const ACT = {
       S.busy = false;
       if (!r.ok) { S.msg = r.error || 'تعذر التسجيل'; render(); return; }
       S.user = { phone: d.phone, name: d.name, type: d.type, stage: d.stage, token: r.token, code: r.code || '' };
-      S.newCode = r.code || ''; store.set('rw_user', S.user); go(S.newCode ? 'welcome' : 'home'); refreshStatus();
+      S.newCode = r.code || ''; store.set('rw_user', S.user); afterAuth(S.newCode ? 'welcome' : 'home'); refreshStatus();
     });
   },
   zoom(d) {
@@ -837,7 +890,7 @@ const ACT = {
       S.busy = false;
       if (!r.ok) { S.msg = r.error || 'تعذر الدخول'; render(); return; }
       S.user = { phone, name: r.name, type: r.type, stage: r.stage, token: r.token, code: r.code || '' };
-      store.set('rw_user', S.user); go('home'); refreshStatus();
+      store.set('rw_user', S.user); afterAuth('home'); refreshStatus();
     });
   },
   logout() { S.user = null; S.stamps = 0; S.rewards = 0; S.reward = ''; S.orders = []; S.cart = {}; try { localStorage.removeItem('rw_user'); localStorage.removeItem('rw_cart'); } catch (e) {} go('login'); },
@@ -857,7 +910,7 @@ const ACT = {
     if (!window.isSecureContext) return fail('تحديد الموقع يعمل فقط عند فتح التطبيق من رابطه على الإنترنت (https)، لا من ملف على الجهاز.');
     if (!navigator.geolocation) return fail('جهازك لا يدعم تحديد الموقع.');
     S.locating = true; S.msg = ''; render();
-    const ok = p => { S.locating = false; S.co.lat = p.coords.latitude; S.co.lng = p.coords.longitude; S.msg = ''; render(); };
+    const ok = p => { S.locating = false; S.co.lat = p.coords.latitude; S.co.lng = p.coords.longitude; store.set('rw_loc', { lat: S.co.lat, lng: S.co.lng, at: Date.now() }); S.msg = ''; render(); };
     const err = (e, retried) => {
       if (e.code === 1) return fail('لم تسمح للتطبيق بالوصول إلى الموقع. اسمح به من إعدادات المتصفح ثم أعد المحاولة.');
       // فشل GPS الدقيق: نحاول مرة واحدة بالدقة العادية (شبكة الهاتف والواي فاي)
