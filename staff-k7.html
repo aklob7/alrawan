@@ -228,6 +228,10 @@ const V = {
       '<div class="kpis"><div><b>' + c.n + '</b>كل الطلبات</div><div><b>' + c.delivered + '</b>مسلّمة</div><div><b>' + c.returned + '</b>راجعة</div><div><b>' + c.rejected + '</b>مرفوضة</div>' +
       '<div><b>' + money(c.spent) + '</b>مجموع ما اشتراه</div><div><b>' + (c.delivered ? money(Math.round(c.spent / c.delivered)) : '—') + '</b>متوسط الطلب</div>' +
       '<div><b>' + c.stamps + ' / ' + S.per + '</b>أختام بطاقة الوفاء</div><div><b>' + c.gifts + '</b>هدايا متاحة</div></div>' +
+      '<div class="card"><h3>اشترى ملازم من المحل؟ اختمها له</h3><p class="hint">تُضاف الأختام إلى بطاقة الوفاء في حسابه فوراً، مثل طلبات التطبيق. أختام من المحل حتى الآن: <b style="color:var(--ink)">' + (c.shop || 0) + '</b></p>' +
+        '<div class="row"><div style="flex:1"><label for="c-sn">عدد الملازم</label><select id="c-sn">' + [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => '<option value="' + n + '">' + n + '</option>').join('') + '</select></div>' +
+        '<button class="red" style="flex:2;align-self:flex-end" data-act="custStamp" data-v="1"' + (S.busy ? ' disabled' : '') + '>ختم</button></div>' +
+        (own && c.shop > 0 ? '<button class="small delbtn" data-act="custStamp" data-v="-1"' + (S.busy ? ' disabled' : '') + '>إلغاء ختم واحد (خطأ في الختم)</button>' : '') + '</div>' +
       (own ? '<div class="card"><h3>ملاحظة الإدارة (لا يراها الزبون)</h3><input id="c-note" maxlength="200" value="' + esc(c.note) + '" placeholder="مثلاً: يفضّل الاتصال قبل التوصيل" aria-label="ملاحظة الإدارة">' +
         '<button class="black" data-act="custNote"' + (S.busy ? ' disabled' : '') + '>حفظ الملاحظة</button>' +
         '<button class="' + (c.blocked ? 'red' : 'delbtn') + '" data-act="custBlock"' + (S.busy ? ' disabled' : '') + '>' + (c.blocked ? 'إعادة تفعيل الحساب' : 'إيقاف الحساب (لا يستطيع إرسال طلبات)') + '</button></div>'
@@ -423,6 +427,17 @@ function keepAds() { document.querySelectorAll('[data-ad]').forEach(e => { S.ads
 
 const ACT = {
   custOpen(d) { S.cust = d.v; S.custOrders = null; render(); window.scrollTo(0, 0); api('admin_cust', { phone: d.v }).then(r => { if (S.cust !== d.v) return; S.custOrders = r.ok ? r.orders : []; if (!r.ok) say(r.error || 'تعذر التحميل'); render(); }); },
+  custStamp(d) {
+    const c = S.custs.find(x => x.phone === S.cust); if (!c) return;
+    const n = d.v === '-1' ? -1 : Number($('c-sn').value) || 1;
+    S.busy = true; render();
+    api('admin_stamp', { phone: c.phone, n }).then(r => {
+      S.busy = false;
+      if (r.ok) { c.shop = r.shop; c.stamps = r.stamps; c.gifts = r.gifts; say(n > 0 ? 'خُتمت ' + n + ' ملزمة لـ' + c.name + '. البطاقة الآن ' + r.stamps + ' / ' + S.per + (r.gifts ? ' — لديه ' + r.gifts + ' هدية متاحة' : '') : 'أُلغي ختم واحد.', true); }
+      else say(r.error || 'تعذر الختم');
+      render(); window.scrollTo(0, 0);
+    });
+  },
   custBack() { S.cust = null; render(); },
   custMore() { S.cmore = (S.cmore || 60) + 60; render(); },
   custReload() { S.custs = null; render(); loadCusts(); },
