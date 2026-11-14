@@ -54,6 +54,8 @@ h3{font-size:16px;margin-top:4px}
 .msg{padding:10px 12px;border-radius:12px;font-weight:700;background:#fdecec;color:#8a0a0f}
 .msg.good{background:#e6f5ec;color:var(--ok)}
 .hint{color:#555;font-size:14px}
+.nopr{background:#FFF4D6;border:2px solid #E0A800;color:#5A4300;font-weight:800;text-align:right;min-height:46px}
+.np{color:#B26A00;font-size:13px;white-space:nowrap}
 .item{display:flex;align-items:center;gap:12px;padding:10px;border:2px solid var(--line);border-radius:14px;background:#fff;text-align:right;min-height:72px}
 .item .t{flex:1;display:flex;flex-direction:column}
 .item b{font-size:16px}
@@ -265,16 +267,24 @@ const V = {
         : '<div class="card"><p>لا يوجد كباتن بعد.</p></div>');
   },
   items() {
-    const q = S.q.trim(), list = S.d.products.filter(p => (!S.f || p.sec === S.f) && (!q || (p.name + ' ' + p.l1 + ' ' + p.l2).includes(q)));
+    const q = S.q.trim(), base = S.d.products.filter(p => (!S.f || p.sec === S.f) && (!q || (p.name + ' ' + p.l1 + ' ' + p.l2).includes(q)));
+    const nNo = base.filter(p => !(p.price > 0)).length, nYes = base.length - nNo, pf = S.pf || '';
+    const list = base.filter(p => !pf || (pf === 'no' ? !(p.price > 0) : p.price > 0));
+    const allNo = S.d.products.filter(p => !(p.price > 0)).length;
     return '<button class="red" data-act="add">+ إضافة منتج جديد</button>' +
+      (allNo ? '<button class="nopr" data-act="pf" data-v="no">⚠ ' + allNo + ' منتج بدون سعر — لا يظهر للزبائن حتى تسعّره. اضغط هنا لتسعيرها</button>' : '') +
+      '<div class="tabs"><button class="' + (pf === '' ? 'on' : '') + '" data-act="pf" data-v="">الكل (' + base.length + ')</button>' +
+      '<button class="' + (pf === 'yes' ? 'on' : '') + '" data-act="pf" data-v="yes">المسعّرة (' + nYes + ')</button>' +
+      '<button class="' + (pf === 'no' ? 'on' : '') + '" data-act="pf" data-v="no">بدون سعر (' + nNo + ')</button></div>' +
       '<div class="row"><select id="f-sec" data-change="filter" aria-label="القسم" style="flex:1"><option value="">كل الأقسام</option>' +
       S.d.sections.map(s => '<option' + (S.f === s.name ? ' selected' : '') + '>' + esc(s.name) + '</option>').join('') + '</select></div>' +
       '<input id="f-q" type="search" placeholder="ابحث باسم المنتج" value="' + esc(S.q) + '" aria-label="بحث">' +
-      '<p class="hint">' + list.length + ' منتج. اضغط على أي منتج لتعديل اسمه أو سعره أو صورته.</p>' +
+      '<p class="hint">' + list.length + ' منتج. ' + (pf === 'no' ? 'اضغط على المنتج واكتب سعره ثم احفظ، فيظهر للزبائن مباشرة.' : 'اضغط على أي منتج لتعديل اسمه أو سعره أو صورته.') + '</p>' +
       '<div id="list" style="display:flex;flex-direction:column;gap:8px">' + list.slice(0, 120).map(p =>
         '<button class="item" data-act="edit" data-v="' + esc(p.id) + '">' + imgTag(p.img, 'thumb') +
         '<span class="t"><b>' + esc(p.name) + '</b><span>' + esc([p.sec, p.l1, p.l2].filter(Boolean).join(' · ')) + '</span></span>' +
-        '<b style="color:var(--red)">' + money(p.price) + '</b></button>').join('') + '</div>' +
+        (p.price > 0 ? '<b style="color:var(--red)">' + money(p.price) + '</b>' : '<b class="np">بدون سعر</b>') + '</button>').join('') + '</div>' +
+      (pf === 'no' && !list.length ? '<p class="hint" style="text-align:center">✓ كل المنتجات مسعّرة</p>' : '') +
       (list.length > 120 ? '<p class="hint">يظهر أول ١٢٠ منتجاً. استعمل البحث للوصول إلى البقية.</p>' : '');
   },
   form() {
@@ -292,7 +302,7 @@ const V = {
     } else place = '<p class="hint">' + esc([e.sec, e.l1, e.l2].filter(Boolean).join(' · ')) + '</p>';
     return '<div class="card">' + place +
       '<div><label for="e-name">اسم المنتج</label><input id="e-name" value="' + esc(e.name) + '"></div>' +
-      '<div><label for="e-price">السعر (دينار)</label><input id="e-price" type="number" inputmode="numeric" min="0" step="250" dir="ltr" value="' + esc(e.price) + '"></div>' +
+      '<div><label for="e-price">السعر (دينار)</label><input id="e-price" type="number" inputmode="numeric" min="0" step="250" dir="ltr" value="' + esc(Number(e.price) > 0 || e.price === '' ? e.price : (e.id ? '' : e.price)) + '"' + (e.id && !(Number(e.price) > 0) ? ' placeholder="اكتب السعر" autofocus' : '') + '></div>' +
       '<div><label>الصورة</label><button class="photo" data-act="pick" aria-label="اختيار صورة">' +
       (S.imgNew ? '<img src="' + S.imgNew + '" alt="">' : img ? imgTag(img, '') : '<span style="font-size:40px">📷</span>') +
       '<span>' + (img ? 'اضغط لتغيير الصورة' : 'اضغط لاختيار صورة من الهاتف') + '</span></button></div>' +
@@ -478,6 +488,7 @@ const ACT = {
   addAd() { keepAds(); S.pickFor = 'ad'; $('pick').click(); },
   addTextAd() { keepAds(); S.ads.unshift({ text: '', img: '', link: '' }); say('اكتب نص الإعلان ثم اضغط "رفع الإعلانات".', true); render(); const f = document.querySelector('[data-ad="0"]'); if (f) f.focus(); },
   delAd(d) { keepAds(); S.ads.splice(+d.v, 1); say('حُذف من القائمة. اضغط "رفع الإعلانات" للحفظ.', true); render(); },
+  pf(d) { S.pf = d.v; render(); window.scrollTo(0, 0); },
   save() {
     keepForm();
     const e = S.edit, price = Number(e.price);
@@ -494,7 +505,7 @@ const ACT = {
       return api('admin_items', { items: [it] }).then(x => { if (!x.ok) throw new Error(x.error || 'تعذر الحفظ'); return x; });
     }).then(() => {
       S.busy = false; S.imgNew = ''; if (history.state && history.state.form) history.back(); else closeForm();
-      api('admin_get').then(r => { if (r.ok) S.d = r; say('تم الرفع ✓ يظهر في التطبيق الآن.', true); render(); });
+      api('admin_get').then(r => { if (r.ok) S.d = r; say(Math.round(price) > 0 ? 'تم الرفع ✓ يظهر في التطبيق الآن.' : 'حُفظ بدون سعر — لن يظهر للزبائن حتى تكتب سعره.', true); render(); });
     }).catch(err => { S.busy = false; say(err.message); render(); });
   },
   saveAds() {
